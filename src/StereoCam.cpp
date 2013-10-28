@@ -6,22 +6,57 @@
  */
 
 #include "StereoCam.h"
+#include <opencv2/gpu/gpu.hpp>
 #include <iostream>
 
 using namespace std;
 
+stereoModeData::stereoModeData()
+{
+	mMode = SM_BLOCK_MACHING;
+
+	camera.mCam1 = NULL;
+	camera.mCam2 = NULL;
+
+	common.mMaxDisp = -1;
+	common.mMinDisp = -1;
+	common.mLevels = -1;
+
+	gpuCommon.mNdisp = -1;
+	gpuCommon.mIters = -1;
+	gpuCommon.mMsgType = -1;
+	gpuCommon.mMaxDataTerm = -1;
+	gpuCommon.mDataWeight = -1;
+	gpuCommon.mMaxDiscTerm = -1;
+	gpuCommon.mDiscSingleJump = -1;
+
+	blockMaching.mSadWindowSize = -1;
+
+	var.mPyrScale = -1;
+	var.mnIt = -1;
+	var.mPolyN = -1;
+	var.mPolySigma = -1;
+	var.mFi = -1;
+	var.mLambda = -1;
+	var.mPenalization = -1;
+	var.mCycle = -1;
+	var.mFlags = -1;
+
+	//Belief Propagation
+
+	constantSpaceBP.mNrPlane = -1;
+}
+
 StereoCam::StereoCam()
+		: mData()
 {
 	mMode = invalidMode;
 	mShiftMode = NONE;
-	mCam1 = NULL;
-	mCam2 = NULL;
+	mStereoDevice = NULL;
 }
 
-StereoCam::StereoCam(int disparitiesCnt, int sadWindowSize, std::string window1, std::string window2,
-						std::string disparityWindow, camData *cam1, camData *cam2, Mat R, Mat T, Mat Q, SHIFT_CAM mode) :
-		mCam1(cam1), mCam2(cam2), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mR(R), mT(T),
-				mQ(Q), mStereoCam(StereoBM::BASIC_PRESET, disparitiesCnt, sadWindowSize)
+StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode)
+		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL)
 {
 	if (mode == NONE)
 	{
@@ -33,18 +68,60 @@ StereoCam::StereoCam(int disparitiesCnt, int sadWindowSize, std::string window1,
 		mMode = shiftedCam;
 		mShiftMode = mode;
 	}
+
+	mStereoDevice = createStereoDevice(mData);
 }
 
-StereoCam::StereoCam(int disparitiesCnt, int sadWindowSize, std::string window1, std::string window2,
-						std::string disparityWindow, Mat &left, Mat &right) :
-		mCam1(NULL), mCam2(NULL), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow),
-				mStereoCam(StereoBM::BASIC_PRESET, disparitiesCnt, sadWindowSize), mMode(StereoCam::staticImg),
-				mShiftMode(NONE)
+StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right)
+		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL), mMode(StereoCam::staticImg), mShiftMode(
+				NONE)
 {
 	left.copyTo(mLeft);
 	right.copyTo(mRight);
 //	cvtColor(left, mLeft, CV_RGB2GRAY);
 //	cvtColor(right, mRight, CV_RGB2GRAY);
+
+	mStereoDevice = createStereoDevice(mData);
+}
+
+StereoCam::~StereoCam()
+{
+	if(mStereoDevice != NULL)
+	{
+		delete mStereoDevice;
+		mStereoDevice = NULL;
+	}
+}
+
+StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
+{
+	iStereoDevice *device = NULL;
+	switch (data.mMode)
+	{
+	case SM_BLOCK_MACHING:
+		device = new StereoContainer<StereoBM>(new StereoBM(StereoBM::BASIC_PRESET, data.common.mMaxDisp, data.blockMaching.mSadWindowSize));
+		break;
+	case SM_VAR:
+		device = new StereoContainer<StereoVar>(
+				new StereoVar(data.common.mLevels, data.var.mPyrScale, data.var.mnIt, data.common.mMinDisp, data.common.mMaxDisp, data.var.mPolyN,
+						data.var.mPolySigma, data.var.mFi, data.var.mLambda, data.var.mPenalization, data.var.mCycle, data.var.mFlags));
+		break;
+	case SM_BELIEF_PROPAGATION:
+		device = new StereoContainer<gpu::StereoBeliefPropagation>(
+				new gpu::StereoBeliefPropagation(data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.gpuCommon.mMaxDataTerm,
+						data.gpuCommon.mDataWeight, data.gpuCommon.mMaxDiscTerm, data.gpuCommon.mDiscSingleJump, data.gpuCommon.mMsgType));
+		break;
+	case SM_CONSTANT_SPACE_BP:
+		device = new StereoContainer<gpu::StereoConstantSpaceBP>(
+				new gpu::StereoConstantSpaceBP(data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.constantSpaceBP.mNrPlane,
+						data.gpuCommon.mMaxDataTerm, data.gpuCommon.mDataWeight, data.gpuCommon.mMaxDiscTerm, data.gpuCommon.mDiscSingleJump,
+						data.common.mMinDisp, data.gpuCommon.mMsgType));
+		break;
+	default:
+		break;
+	}
+
+	return device;
 }
 
 void StereoCam::process(bool skipRemap)
@@ -63,8 +140,8 @@ void StereoCam::process(bool skipRemap)
 	switch (mMode)
 	{
 	case normalCam:
-		*mCam1->mCap >> frame1;
-		*mCam2->mCap >> frame2;
+		*mData.camera.mCam1->mCap >> frame1;
+		*mData.camera.mCam2->mCap >> frame2;
 
 		if (frame1.empty() || frame2.empty())
 			return;
@@ -76,8 +153,8 @@ void StereoCam::process(bool skipRemap)
 		}
 		else
 		{
-			remap(frame1, oFrame1, mCam1->mMap1, mCam1->mMap2, INTER_LANCZOS4);
-			remap(frame2, oFrame2, mCam2->mMap1, mCam2->mMap2, INTER_LANCZOS4);
+			remap(frame1, oFrame1, mData.camera.mCam1->mMap1, mData.camera.mCam1->mMap2, INTER_LANCZOS4);
+			remap(frame2, oFrame2, mData.camera.mCam2->mMap1, mData.camera.mCam2->mMap2, INTER_LANCZOS4);
 		}
 
 		cvtColor(oFrame1, gray1, CV_RGB2GRAY);
@@ -85,8 +162,8 @@ void StereoCam::process(bool skipRemap)
 
 		break;
 	case shiftedCam:
-		*mCam1->mCap >> frame1;
-		*mCam2->mCap >> frame2;
+		*mData.camera.mCam1->mCap >> frame1;
+		*mData.camera.mCam2->mCap >> frame2;
 
 		if (frame1.empty() || frame2.empty())
 			return;
@@ -98,8 +175,8 @@ void StereoCam::process(bool skipRemap)
 		}
 		else
 		{
-			remap(frame1, oFrame1, mCam1->mMap1, mCam1->mMap2, INTER_LANCZOS4);
-			remap(frame2, oFrame2, mCam2->mMap1, mCam2->mMap2, INTER_LANCZOS4);
+			remap(frame1, oFrame1, mData.camera.mCam1->mMap1, mData.camera.mCam1->mMap2, INTER_LANCZOS4);
+			remap(frame2, oFrame2, mData.camera.mCam2->mMap1, mData.camera.mCam2->mMap2, INTER_LANCZOS4);
 		}
 
 		cvtColor(oFrame1, gray1, CV_RGB2GRAY);
@@ -138,7 +215,7 @@ void StereoCam::process(bool skipRemap)
 	default:
 		return;
 	}
-	mStereoCam(gray1, gray2, dispFrame, CV_32F);
+	(*mStereoDevice)(gray1, gray2, dispFrame, CV_32F);
 
 	double min, max;
 	minMaxIdx(dispFrame, &min, &max);
@@ -153,15 +230,42 @@ void StereoCam::process(bool skipRemap)
 
 const Mat& StereoCam::getR()
 {
-	return mR;
+	return mData.camera.R;
 }
 
 const Mat& StereoCam::getT()
 {
-	return mT;
+	return mData.camera.T;
 }
 
 const Mat& StereoCam::getQ()
 {
-	return mQ;
+	return mData.camera.Q;
+}
+
+// --- StereoCam::StereoContainer ---
+template<>
+void StereoCam::StereoContainer<StereoBM>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	mStereoDevice->operator ()(left, right, disparity, disptype);
+}
+
+template<>
+void StereoCam::StereoContainer<StereoVar>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	mStereoDevice->operator ()(left, right, disparity);
+}
+
+template<>
+void StereoCam::StereoContainer<gpu::StereoBeliefPropagation>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	gpu::GpuMat gpuLeft(left), gpuRight(right), gpuDisp(disparity);
+	mStereoDevice->operator ()(gpuLeft, gpuRight, gpuDisp);
+}
+
+template<>
+void StereoCam::StereoContainer<gpu::StereoConstantSpaceBP>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	gpu::GpuMat gpuLeft(left), gpuRight(right), gpuDisp(disparity);
+	mStereoDevice->operator ()(gpuLeft, gpuRight, gpuDisp);
 }

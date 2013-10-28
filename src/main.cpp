@@ -11,8 +11,9 @@ int main(int argc, char **argv)
 {
 	//Parsing program options from command line.
 	po::variables_map varMap;
-	po::options_description *optDesc = NULL;
-	switch (programOptions(varMap, optDesc, argc, argv))
+	po::options_description *conCfg = NULL;
+	po::options_description *fileCfg = NULL;
+	switch (programOptions(varMap, conCfg, fileCfg, argc, argv))
 	{
 	case SUCCESS:
 		break;
@@ -23,19 +24,23 @@ int main(int argc, char **argv)
 	}
 
 	//parameters that can be defined using command line options.
-	bool staticImages = false, skipCalib = false, swapCameras = false;
-	string leftImg, rightImg, intrParamsFile, extrParamsFile;
-	int disparitiesCnt = 16;
-	int sadWindowSize = 21;
-	int sampleNums = 25;
-	int delay = 1000;
-	float squareSize = 25.5;
-	Size boardSize = Size(9, 6);
-	StereoCam::SHIFT_CAM shiftedCam = StereoCam::NONE;
+//	Size boardSize = Size(9, 6);
+
+	calibrationCfg calibInfo;
+	programCfg programInfo;
+	stereoModeData stereoModeInfo;
 
 	//Retrieving parsed command line options.
-	getRuntimeConfiguration(varMap, staticImages, leftImg, rightImg, skipCalib, disparitiesCnt, sadWindowSize,
-			sampleNums, delay, squareSize, boardSize, swapCameras, intrParamsFile, extrParamsFile, shiftedCam);
+	if (!getRuntimeConfiguration(varMap, calibInfo, programInfo, stereoModeInfo))
+	{
+		cerr << "\nThis program options may be specified both from the command line and config.cfg file:\n"
+				<< "(parameters specified in console override those from file)\n";
+		conCfg->print(cerr);
+		cerr << "\nThis program options may be specified only in config.cfg file:\n";
+		fileCfg->print(cerr);
+		cerr << endl;
+
+	}
 
 	//Camera handlers
 	VideoCapture capture1(0), capture2(1);
@@ -43,11 +48,12 @@ int main(int argc, char **argv)
 	camPoints points1, points2;
 
 	//Setting intrinsics camera parameters (either from file or default (neutral) ones.
-	initIntrinsicsCamParams(swapCameras, cam1, cam2, intrParamsFile, capture1, capture2);
+	initIntrinsicsCamParams(programInfo.mSwapCameras, cam1, cam2, programInfo.mIntrinsics, capture1, capture2);
 
 	cvNamedWindow("Cam1", CV_WINDOW_AUTOSIZE);
 	cvNamedWindow("Cam2", CV_WINDOW_AUTOSIZE);
 	Mat frame1, frame2, oFrame1, oFrame2, R, T, Q;
+
 	capture1 >> frame1;
 	capture2 >> frame2;
 
@@ -61,13 +67,13 @@ int main(int argc, char **argv)
 	//key is pressed before acquiring enough pictures during calibration or if file containing
 	//extrinsics parameters could not be opened.
 	Mat left, right;
-	if (!staticImages)
+	if (!programInfo.mStatic)
 	{
-		if (!skipCalib)
+		if (!calibInfo.mSkip)
 		{
-			if (aquireCalibData(cam1, cam2, points1, points2, sampleNums, boardSize, delay) >= 2)
+			if (aquireCalibData(cam1, cam2, points1, points2, calibInfo.mCalibSamples, calibInfo.mBoardSize, calibInfo.mDelay) >= 2)
 			{
-				if (!calibrateCameras(cam1, cam2, points1, points2, boardSize, squareSize, R, T, Q))
+				if (!calibrateCameras(cam1, cam2, points1, points2, calibInfo.mBoardSize, calibInfo.mSquareSize, R, T, Q))
 				{
 					std::cerr << "Error calibrating cameras!";
 					return 2;
@@ -78,22 +84,26 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			initExtrinsicsCamParams(extrParamsFile, skipCalib, R, T, Q, cam1, cam2);
+			initExtrinsicsCamParams(programInfo.mExtrinsics, calibInfo.mSkip, R, T, Q, cam1, cam2);
 		}
 	}
 	else
 	{
-		left = imread(leftImg, CV_LOAD_IMAGE_GRAYSCALE);
-		right = imread(rightImg, CV_LOAD_IMAGE_GRAYSCALE);
+		left = imread(programInfo.mLeft, CV_LOAD_IMAGE_GRAYSCALE);
+		right = imread(programInfo.mRight, CV_LOAD_IMAGE_GRAYSCALE);
 	}
 
-	//Creating stereo camera.
+	stereoModeInfo.camera.mCam1 = &cam1;
+	stereoModeInfo.camera.mCam2 = &cam2;
+	stereoModeInfo.camera.R = R;
+	stereoModeInfo.camera.T = T;
+	stereoModeInfo.camera.Q = Q;
+
 	StereoCam *scCam;
-	if (staticImages)
-		scCam = new StereoCam(disparitiesCnt, sadWindowSize, "Cam1", "Cam2", "StereoCam", left, right);
+	if (programInfo.mStatic)
+		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", left, right);
 	else
-		scCam = new StereoCam(disparitiesCnt, sadWindowSize, "Cam1", "Cam2", "StereoCam", &cam1, &cam2, R, T, Q,
-				shiftedCam);
+		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", programInfo.mShifted);
 
 	cvNamedWindow("StereoCam", CV_WINDOW_AUTOSIZE);
 
@@ -102,7 +112,7 @@ int main(int argc, char **argv)
 	// Live display
 	while (1)
 	{
-		scCam->process(skipCalib);
+		scCam->process(calibInfo.mSkip);
 
 		char c = cvWaitKey(33);
 		if (c == 27)

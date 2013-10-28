@@ -11,8 +11,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/contrib/contrib.hpp>
+//#include <opencv2/>
+#include <opencv2/opencv_modules.hpp>
 
 using namespace cv;
+
+enum StereoMode
+{
+	SM_BLOCK_MACHING = 0, SM_VAR, SM_BELIEF_PROPAGATION, SM_CONSTANT_SPACE_BP
+};
 
 struct camData
 {
@@ -31,10 +39,71 @@ struct camData
 
 	//methods
 public:
-	camData(VideoCapture *cap) :
-			mCap(cap)
+	camData(VideoCapture *cap)
+			: mCap(cap)
 	{
 	}
+};
+
+struct stereoModeData
+{
+	StereoMode mMode;
+	struct
+	{
+		camData *mCam1;
+		camData *mCam2;
+		Mat R;
+		Mat T;
+		Mat Q;
+	} camera;
+
+	struct
+	{
+		int mMaxDisp;
+		int mMinDisp;
+		int mLevels;
+	} common;
+
+	struct
+	{
+		int mNdisp;
+		int mIters;
+		int mMsgType;
+		float mMaxDataTerm;
+		float mDataWeight;
+		float mMaxDiscTerm;
+		float mDiscSingleJump;
+	} gpuCommon;
+
+	struct
+	{
+		int mSadWindowSize;
+	} blockMaching;
+
+	struct
+	{
+		double mPyrScale;
+		int mnIt;
+		int mPolyN;
+		double mPolySigma;
+		float mFi;
+		float mLambda;
+		int mPenalization;
+		int mCycle;
+		int mFlags;
+	} var;
+
+	struct
+	{
+	} beliefPropagation;
+
+	struct
+	{
+		int mNrPlane;
+	} constantSpaceBP;
+
+public:
+	stereoModeData();
 };
 
 class StereoCam
@@ -52,8 +121,52 @@ public:
 	};
 
 private:
-	camData *mCam1;
-	camData *mCam2;
+	class iStereoDevice
+	{
+	protected:
+		iStereoDevice()
+		{
+		}
+
+	public:
+		virtual void operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype) = 0;
+		virtual ~iStereoDevice()
+		{
+		}
+	};
+
+	template<class T>
+	class StereoContainer: public iStereoDevice
+	{
+	private:
+		T* mStereoDevice;
+
+		StereoContainer()
+		{
+			mStereoDevice = NULL;
+		}
+
+	public:
+		StereoContainer(T* device)
+				: iStereoDevice(), mStereoDevice(device)
+		{
+		}
+		~StereoContainer()
+		{
+			if (mStereoDevice != NULL)
+			{
+				delete mStereoDevice;
+				mStereoDevice = NULL;
+			}
+		}
+
+		void operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype);
+	};
+
+	static iStereoDevice* createStereoDevice(stereoModeData &data);
+
+private:
+	stereoModeData mData;
 
 	Mat mLeft;
 	Mat mRight;
@@ -62,20 +175,17 @@ private:
 	std::string mWindow2;
 	std::string mDisparityWindow;
 
-	Mat mR, mT, mQ;
-
-	StereoBM mStereoCam;
+	iStereoDevice *mStereoDevice;
 
 	SC_MODE mMode;
 	SHIFT_CAM mShiftMode;
 
 	StereoCam();
+
 public:
-	StereoCam(int disparitiesCnt, int sadWindowSize, std::string window1, std::string window2,
-				std::string disparityWindow, camData *cam1, camData *cam2, Mat R, Mat T, Mat Q,
-				SHIFT_CAM mode = NONE);
-	StereoCam(int disparitiesCnt, int sadWindowSize, std::string window1, std::string window2,
-				std::string disparityWindow, Mat &left, Mat &right);
+	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode = NONE);
+	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right);
+	~StereoCam();
 
 	void process(bool skipRemap);
 
