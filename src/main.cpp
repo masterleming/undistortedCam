@@ -9,7 +9,6 @@
 
 int main(int argc, char **argv)
 {
-	cout<< SHRT_MAX <<endl;
 	//Parsing program options from command line.
 	po::variables_map varMap;
 	po::options_description *conCfg = NULL;

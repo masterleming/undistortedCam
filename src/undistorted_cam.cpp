@@ -68,7 +68,6 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 			//constant space options
 			("nr_plane", po::value<int>(),"Number of disparity levels on the first level.")
 			;
-
 	po::options_description fileOptions("File options");
 	fileOptions.add(*conCfg).add(*fileCfg);
 
@@ -259,7 +258,7 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 		camData.blockMaching.mSadWindowSize = varMap["sad-window-size"].as<int>();
 	///////////////////////////////////////////////////////////////////
 	if (varMap.count("pyr_scale"))
-		camData.var.mPyrScale = varMap["pyr_scale"].as<float>();
+		camData.var.mPyrScale = varMap["pyr_scale"].as<double>();
 
 	if (varMap.count("n_it"))
 		camData.var.mnIt = varMap["n_it"].as<int>();
@@ -268,7 +267,7 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 		camData.var.mPolyN = varMap["poly_n"].as<int>();
 
 	if (varMap.count("poly_sigma"))
-		camData.var.mPolySigma = varMap["poly_sigma"].as<float>();
+		camData.var.mPolySigma = varMap["poly_sigma"].as<double>();
 
 	if (varMap.count("fi"))
 		camData.var.mFi = varMap["fi"].as<float>();
