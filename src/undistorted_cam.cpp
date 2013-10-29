@@ -68,6 +68,7 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 			//constant space options
 			("nr_plane", po::value<int>(),"Number of disparity levels on the first level.")
 			;
+
 	po::options_description fileOptions("File options");
 	fileOptions.add(*conCfg).add(*fileCfg);
 
