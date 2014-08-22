@@ -9,10 +9,11 @@
 #include "undistorted_cam.h"
 #include "StereoCam.h"
 
-optionReadStatus programOptions(po::variables_map &vm, po::options_description *&conCfg, po::options_description *&fileCfg, int argc, char **argv)
+optionReadStatus programOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv)
 {
-	conCfg = new po::options_description("Command line options");
-	conCfg->add_options()("mode,m", po::value<string>()->default_value("bm"), "Stereo algorithm to be used. Supported values are:"
+	po_description = new po::options_description("Program options");
+	po::options_description basic_options("Basic configuration");
+	basic_options.add_options()("mode,m", po::value<string>()->default_value("bm"), "Stereo algorithm to be used. Supported values are:"
 					"\n bm  - block maching"
 					"\n var - var"
 					"\n bp  - belief propagation"
@@ -22,10 +23,13 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 			("right,r", po::value<string>(), "Sets right image for static image stereo-vision.")
 			("static,s", "Enables static image stereo-vision.")
 			("shifted", po::value<string>(),"Applies algorithm to two copies of the same image, one of which has a rectangular piece of image shifted in an arbitrary direction. Pass \"left\" to copy left picture or \"right\" to copy right picture")
-			("skip", "Skips camera calibration.")
+			("swap-cameras,S","Swaps cameras input so there is no need to move already positioned cameras.")
+			;
+
+	po::options_description calibration_options("Calibraton configuration");
+	calibration_options.add_options()("skip", "Skips camera calibration.")
 			("intrinsics,i", po::value<string>(), "Sets file containing intrinsics calibration parameters.")
 			("extrinsics,e", po::value<string>(), "Sets file containing extrinsics calibration parameters.")
-			("swap-cameras,S","Swaps cameras input so there is no need to move already positioned cameras.")
 			("calibration-samples,c", po::value<int>()->default_value(25), "How many pictures shall be acquired for calibration.")
 			("delay,D",po::value<int>()->default_value(1000), "Delay between samples measured in milliseconds.")
 			("square-size",po::value<float>()->default_value(25.5),"Distance between square corners. May be any arbitrary value or physical length of the square edge in millimeters or inches or pixels.")
@@ -33,24 +37,29 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 			("board-height,H",po::value<int>()->default_value(6), "Height of the calibrating pattern.")
 			;
 
-	fileCfg = new po::options_description("Config file options");
-	fileCfg->add_options()
-			//common options
-			("max_disp", po::value<int>(), "How many disparities shall be searched for. Allowed values are 0 and any integer multiplication of 16.")
+	po::options_description algo_all("Stereovision algorithms configuration");
+
+	po::options_description algo_common("Common stereovision configuration");
+	algo_common.add_options()("max_disp", po::value<int>(), "How many disparities shall be searched for. Allowed values are 0 and any integer multiplication of 16.")
 			("min_disp", po::value<int>(), "Minimal number to be searched for (only some algorithms support this feature.")
 			("levels", po::value<int>(), "The number of pyramid layers, including the initial image.")
-			//GPU common options
-			("n_disp", po::value<int>(), "Number of disparities.")
+			;
+
+	po::options_description algo_gpu_common("GPU stereovision common options");
+	algo_gpu_common.add_options()("n_disp", po::value<int>(), "Number of disparities.")
 			("iterations", po::value<int>(), "Number of iterations of algorithm.")
 			("msg_type", po::value<int>(), "Type of message returned by algorithm.")
 			("max_data_term", po::value<float>(), "Truncation of data cost.")
 			("data_weight", po::value<float>(), "Data weight.")
 			("max_disc_term", po::value<float>(), "Truncation of discontinuity.")
 			("disc_single_jump", po::value<float>(), "Discontinuity single jump.")
-			//StereoBM options
-			("sad-window-size,w",po::value<int>()->default_value(21), "Size of the square to search for matching features. Must be an ODD number.")
-			//Var
-			("pyr_scale", po::value<double>(), "Specifies the image scale (<1) to build the pyramids for each image.")
+			;
+
+	po::options_description algo_stereo_bm("Block Maching options");
+	algo_stereo_bm.add_options()("sad-window-size,w",po::value<int>()->default_value(21), "Size of the square to search for matching features. Must be an ODD number.");
+
+	po::options_description algo_var("Var options");
+	algo_var.add_options()("pyr_scale", po::value<double>(), "Specifies the image scale (<1) to build the pyramids for each image.")
 			("n_it", po::value<int>(), "The number of iterations the algorithm does at each pyramid level.")
 			("poly_n", po::value<int>(), "Size of the pixel neighbourhood used to find polynomial expansion in each pixel.")
 			("poly_sigma", po::value<double>(), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
@@ -65,21 +74,41 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 					"\nUSE_AUTO_PARAMS: Allow the method to initialize the main parameters."
 					"\nUSE_MEDIAN_FILTERING: Use the median filer of the solution in the post processing phase."
 					"\nPASS SUM OF DESIRED FLAGS. For actual values check StereoVar.")
-			//belief propagation does not need specific options
-			//constant space options
-			("nr_plane", po::value<int>(),"Number of disparity levels on the first level.")
 			;
-	po::options_description fileOptions("File options");
-	fileOptions.add(*conCfg).add(*fileCfg);
+
+	po::options_description algo_belief_propagation("Belief Propagation options");
+//	algo_belief_propagation.add_options();
+
+	po::options_description algo_constant_space("Constant Space Belief Propagation options");
+	algo_constant_space.add_options()("nr_plane", po::value<int>(),"Number of disparity levels on the first level.");
+
+	algo_all.add(algo_common)
+		.add(algo_gpu_common)
+		.add(algo_stereo_bm)
+		.add(algo_var)
+		.add(algo_belief_propagation)
+		.add(algo_constant_space);
+
+	po_description->add(basic_options)
+		.add(calibration_options)
+		.add(algo_all);
 
 	string cfgFile = "config.cfg";
-	po::store(po::parse_command_line(argc, argv, *conCfg), vm);
-	po::store(po::parse_config_file<char>(cfgFile.c_str(), fileOptions, false), vm);
+	po::store(po::parse_command_line(argc, argv, *po_description), vm);
+	try
+	{
+		po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	catch (boost::program_options::reading_file &e)
+	{
+		//No configuration file -- no biggie
+		cerr << "Can not read configuration file \'config.cfg\'\n";
+	}
 	po::notify(vm);
 
 	if (vm.count("help"))
 	{
-		cout << *conCfg << endl << *fileCfg << endl;
+		cout << *po_description<< endl;
 		return SUCCESS_CLOSE;
 	}
 

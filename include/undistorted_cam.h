@@ -71,7 +71,7 @@ public:
 	}
 };
 
-optionReadStatus programOptions(po::variables_map &vm, po::options_description *&conCfg, po::options_description *&fileCfg, int argc, char **argv);
+optionReadStatus programOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv);
 
 //void getRuntimeConfiguration(const po::variables_map& varMap, bool& staticImages, string& leftImg, string& rightImg, bool& skipCalib,
 //		int& disparitiesCnt, int& sadWindowSize, int& sampleNums, int& delay, float& squareSize, Size& boardSize, bool& swapCameras,

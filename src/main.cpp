@@ -12,9 +12,8 @@ int main(int argc, char **argv)
 {
 	//Parsing program options from command line.
 	po::variables_map varMap;
-	po::options_description *conCfg = NULL;
-	po::options_description *fileCfg = NULL;
-	switch (programOptions(varMap, conCfg, fileCfg, argc, argv))
+	po::options_description *config = NULL;
+	switch (programOptions(varMap, config, argc, argv))
 	{
 	case SUCCESS:
 		break;
@@ -36,11 +35,9 @@ int main(int argc, char **argv)
 	{
 		cerr << "\nThis program options may be specified both from the command line and config.cfg file:\n"
 				<< "(parameters specified in console override those from file)\n";
-		conCfg->print(cerr);
-		cerr << "\nThis program options may be specified only in config.cfg file:\n";
-		fileCfg->print(cerr);
+		config->print(cerr);
 		cerr << endl;
-
+		return FAILURE;
 	}
 
 	//Camera handlers

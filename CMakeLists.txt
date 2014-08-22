@@ -22,7 +22,7 @@ include_directories("include")
 add_subdirectory(src)
 
 install(DIRECTORY data/ DESTINATION data)
-install(FILE config.cfg DESTINATION .)
+install(FILES config.cfg DESTINATION .)
 
 # build a CPack driven installer package
 # include (InstallRequiredSystemLibraries)
