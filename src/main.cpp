@@ -5,6 +5,7 @@
  *      Author: Krzysztof Pilch
  */
 
+#include <iostream>
 #include "undistorted_cam.h"
 
 int main(int argc, char **argv)

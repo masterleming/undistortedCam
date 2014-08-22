@@ -5,6 +5,7 @@
  *      Author: Krzysztof Pilch
  */
 
+#include <iostream>
 #include "undistorted_cam.h"
 #include "StereoCam.h"
 
@@ -78,7 +79,7 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 
 	if (vm.count("help"))
 	{
-		cout << *conCfg << endl;
+		cout << *conCfg << endl << *fileCfg << endl;
 		return SUCCESS_CLOSE;
 	}
 

@@ -26,3 +26,6 @@
 *.settings*
 Debug*
 Release*
+
+# CMake Directories
+build*
