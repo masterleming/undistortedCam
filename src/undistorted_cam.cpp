@@ -182,6 +182,14 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 			cerr << "Invalid algorithm specified: " << prgCfg.mAlgorithm;
 			return false;
 		}
+		if (prgCfg.mAlgorithm == "bm")
+			camData.mMode = SM_BLOCK_MACHING;
+		else if (prgCfg.mAlgorithm == "var")
+			camData.mMode = SM_VAR;
+		else if (prgCfg.mAlgorithm == "bp")
+			camData.mMode = SM_BELIEF_PROPAGATION;
+		else if (prgCfg.mAlgorithm == "cs")
+			camData.mMode = SM_CONSTANT_SPACE_BP;
 	}
 	else
 	{

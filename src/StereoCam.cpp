@@ -259,13 +259,19 @@ void StereoCam::StereoContainer<StereoVar>::operator ()(const Mat &left, const M
 template<>
 void StereoCam::StereoContainer<gpu::StereoBeliefPropagation>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
 {
-	gpu::GpuMat gpuLeft(left), gpuRight(right), gpuDisp(disparity);
+	gpu::GpuMat gpuLeft, gpuRight, gpuDisp;
+	gpuLeft.upload(left);
+	gpuRight.upload(right);
 	mStereoDevice->operator ()(gpuLeft, gpuRight, gpuDisp);
+	gpuDisp.download(disparity);
 }
 
 template<>
 void StereoCam::StereoContainer<gpu::StereoConstantSpaceBP>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
 {
-	gpu::GpuMat gpuLeft(left), gpuRight(right), gpuDisp(disparity);
+	gpu::GpuMat gpuLeft, gpuRight, gpuDisp;
+	gpuLeft.upload(left);
+	gpuRight.upload(right);
 	mStereoDevice->operator ()(gpuLeft, gpuRight, gpuDisp);
+	gpuDisp.download(disparity);
 }
