@@ -14,6 +14,7 @@
 #include <opencv2/contrib/contrib.hpp>
 //#include <opencv2/>
 #include <opencv2/opencv_modules.hpp>
+#include <opencv2/gpu/gpu.hpp>
 
 using namespace cv;
 

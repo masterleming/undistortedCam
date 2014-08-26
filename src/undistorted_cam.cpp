@@ -544,3 +544,45 @@ void saveLastCameraParams(const camData& cam1, const camData& cam2, StereoCam* s
 	else
 		cerr << "Writing last extrinsics parameters has failed!\n";
 }
+
+bool initializeCUDA(int chosen_cuda_card)
+{
+	cout << "\nStarting Nvidia CUDA\n";
+	int cuda_count = gpu::getCudaEnabledDeviceCount();
+	cout << "---\nFound " << cuda_count << " compatible devices\n";
+
+	if(cuda_count == 0)
+		return false;
+
+	int did_chosen = (chosen_cuda_card >= cuda_count ? 0 : chosen_cuda_card);
+
+	gpu::setDevice(did_chosen);
+	cout << "Set " << did_chosen << " CUDA card for use in this program.\n";
+
+	gpu::DeviceInfo cudaInfo;
+
+	cout << "***********\nChosen card DeviceInfo:"
+		"\n\tName:\t\t" << cudaInfo.name() <<
+		"\n\tVersion:\t" << cudaInfo.majorVersion() << '.' << cudaInfo.minorVersion() <<
+		"\n\tMultiprocesors:\t" << cudaInfo.multiProcessorCount() <<
+		"\n\tTotal memory:\t" << cudaInfo.totalMemory() <<
+		"\n\tFree memory:\t" << cudaInfo.freeMemory() <<
+		"\n\n\tIs compatible?\t" << (cudaInfo.isCompatible() ? "YES" : "NO") <<
+		"\n\tSupported features:" <<
+		"\n\t\tFeature set compute 10:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_10) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 11:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_11) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 12:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_12) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 13:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_13) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 20:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_20) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 21:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_21) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 30:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_30) ? "YES" : "NO") <<
+		"\n\t\tFeature set compute 35:\t" << (cudaInfo.supports(gpu::FEATURE_SET_COMPUTE_35) ? "YES" : "NO") <<
+		"\n\t\tGlobal Atomics:\t\t" << (cudaInfo.supports(gpu::GLOBAL_ATOMICS) ? "YES" : "NO") <<
+		"\n\t\tShared Atomics:\t\t" << (cudaInfo.supports(gpu::SHARED_ATOMICS) ? "YES" : "NO") <<
+		"\n\t\tNative Double:\t\t" << (cudaInfo.supports(gpu::NATIVE_DOUBLE) ? "YES" : "NO") <<
+		"\n\t\tWarp shuffle functions:\t" << (cudaInfo.supports(gpu::WARP_SHUFFLE_FUNCTIONS) ? "YES" : "NO") <<
+		"\n\t\tDynamic pararellism:\t" << (cudaInfo.supports(gpu::DYNAMIC_PARALLELISM) ? "YES" : "NO") <<
+		endl;
+
+	return cudaInfo.isCompatible();
+}

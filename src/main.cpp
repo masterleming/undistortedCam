@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 				<< "(parameters specified in console override those from file)\n";
 		config->print(cerr);
 		cerr << endl;
-		return FAILURE;
+		return 3;
 	}
 
 	//Camera handlers
@@ -96,6 +96,17 @@ int main(int argc, char **argv)
 	stereoModeInfo.camera.R = R;
 	stereoModeInfo.camera.T = T;
 	stereoModeInfo.camera.Q = Q;
+
+	if(stereoModeInfo.mMode == SM_BELIEF_PROPAGATION || stereoModeInfo.mMode == SM_CONSTANT_SPACE_BP)
+	{
+		if(!initializeCUDA())
+		{
+			cerr << "\n\nFailed to load CUDA device!\n";
+			return 4;
+		}
+		else
+			cout << "\n\n Loaded CUDA device.\n";
+	}
 
 	StereoCam *scCam;
 	if (programInfo.mStatic)

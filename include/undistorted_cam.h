@@ -101,4 +101,6 @@ bool calibrateCameras(camData &cam1, camData &cam2, camPoints &points1, camPoint
 
 void saveLastCameraParams(const camData& cam1, const camData& cam2, StereoCam* scCam);
 
+bool initializeCUDA(int chosen_cuda_card = 0);
+
 #endif //UNDISTORTED_CAM_H_
