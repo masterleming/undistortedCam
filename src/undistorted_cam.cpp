@@ -559,7 +559,7 @@ bool initializeCUDA(int chosen_cuda_card)
 	gpu::setDevice(did_chosen);
 	cout << "Set " << did_chosen << " CUDA card for use in this program.\n";
 
-	gpu::DeviceInfo cudaInfo;
+	gpu::DeviceInfo cudaInfo(did_chosen);
 
 	cout << "***********\nChosen card DeviceInfo:"
 		"\n\tName:\t\t" << cudaInfo.name() <<
