@@ -118,12 +118,14 @@ int main(int argc, char **argv)
 
 	Mat gray1(oldSize, CV_8UC1), gray2(oldSize, CV_8UC1);
 
+	int waitPeriod = (programInfo.mStatic ? 0 : 33);
+
 	// Live display
 	while (1)
 	{
 		scCam->process(calibInfo.mSkip);
 
-		char c = cvWaitKey(33);
+		char c = cvWaitKey(waitPeriod);
 		if (c == 27)
 			break;
 	}

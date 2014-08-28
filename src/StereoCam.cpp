@@ -6,7 +6,6 @@
  */
 
 #include "StereoCam.h"
-#include <opencv2/gpu/gpu.hpp>
 #include <iostream>
 
 using namespace std;
@@ -96,10 +95,15 @@ StereoCam::~StereoCam()
 StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
 {
 	iStereoDevice *device = NULL;
+	StereoBM *dev = NULL;
 	switch (data.mMode)
 	{
 	case SM_BLOCK_MACHING:
-		device = new StereoContainer<StereoBM>(new StereoBM(StereoBM::BASIC_PRESET, data.common.mMaxDisp, data.blockMaching.mSadWindowSize));
+		dev = new StereoBM(StereoBM::BASIC_PRESET, data.common.mMaxDisp, data.blockMaching.mSadWindowSize);
+		dev->state->speckleWindowSize = 100;
+		dev->state->speckleRange = 32;
+		dev->state->disp12MaxDiff = 1;
+		device = new StereoContainer<StereoBM>(dev);
 		break;
 	case SM_VAR:
 		device = new StereoContainer<StereoVar>(
@@ -113,7 +117,7 @@ StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
 		break;
 	case SM_CONSTANT_SPACE_BP:
 		device = new StereoContainer<gpu::StereoConstantSpaceBP>(
-				new gpu::StereoConstantSpaceBP(data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.constantSpaceBP.mNrPlane,
+				new gpu::StereoConstantSpaceBP( data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.constantSpaceBP.mNrPlane,
 						data.gpuCommon.mMaxDataTerm, data.gpuCommon.mDataWeight, data.gpuCommon.mMaxDiscTerm, data.gpuCommon.mDiscSingleJump,
 						data.common.mMinDisp, data.gpuCommon.mMsgType));
 		break;
@@ -215,17 +219,31 @@ void StereoCam::process(bool skipRemap)
 	default:
 		return;
 	}
-	(*mStereoDevice)(gray1, gray2, dispFrame, CV_32F);
+
+	int64 t = getTickCount();
+	(*mStereoDevice)(gray1, gray2, dispFrame, CV_16S); //CV_32F);
+    t = getTickCount() - t;
+	cout << "Time elapsed: " << t*1000/getTickFrequency() << endl;
 
 	double min, max;
-	minMaxIdx(dispFrame, &min, &max);
 
-//	cout << "min: " << min << "\tmax: " << max << endl;
-	dispFrame = (dispFrame + 1) / (max + 1);
+	Mat dispFrame8;
+
+	minMaxIdx(dispFrame, &min, &max);
+	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+
+	dispFrame.convertTo(dispFrame8, CV_8U);
+	minMaxIdx(dispFrame8, &min, &max);
+	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+
+	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
+	
+	minMaxIdx(dispFrame8, &min, &max);
+	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
 
 	imshow(mWindow1, gray1);
 	imshow(mWindow2, gray2);
-	imshow(mDisparityWindow, dispFrame);
+	imshow(mDisparityWindow, dispFrame8);
 }
 
 const Mat& StereoCam::getR()
@@ -259,7 +277,7 @@ void StereoCam::StereoContainer<StereoVar>::operator ()(const Mat &left, const M
 template<>
 void StereoCam::StereoContainer<gpu::StereoBeliefPropagation>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
 {
-	gpu::GpuMat gpuLeft, gpuRight, gpuDisp;
+	gpu::GpuMat gpuLeft, gpuRight, gpuDisp(left.rows, left.cols, CV_8U);
 	gpuLeft.upload(left);
 	gpuRight.upload(right);
 	mStereoDevice->operator ()(gpuLeft, gpuRight, gpuDisp);
