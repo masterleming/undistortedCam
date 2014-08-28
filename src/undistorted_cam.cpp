@@ -12,6 +12,14 @@
 optionReadStatus programOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv)
 {
 	po_description = new po::options_description("Program options");
+
+	po_description->add_options()("config-file",po::value<string>(), "File containing configuration information to be used.")
+			("help,h", po::value<string>()->implicit_value("all"), "Prints help message. It may be specified to print:\n   \tall, basic, calib, modes, bm, sgbm, var, bp, cs.\nIf no argument is specified 'all' is presumed.")
+			;
+
+	po::positional_options_description pos_opt;
+	pos_opt.add("config-file", 1);
+
 	po::options_description basic_options("Basic configuration");
 	basic_options.add_options()("mode,m", po::value<string>()->default_value("bm"), "Stereo algorithm to be used. Supported values are:"
 					"\n bm  - block maching"
@@ -40,29 +48,29 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 	po::options_description algo_all("Stereovision algorithms configuration");
 
 	po::options_description algo_common("Common stereovision configuration");
-	algo_common.add_options()("max_disp", po::value<int>(), "How many disparities shall be searched for. Allowed values are 0 and any integer multiplication of 16.")
-			("min_disp", po::value<int>(), "Minimal number to be searched for (only some algorithms support this feature.")
+	algo_common.add_options()("max-disp", po::value<int>(), "How many disparities shall be searched for. Allowed values are 0 and any integer multiplication of 16.")
+			("min-disp", po::value<int>(), "Minimal number to be searched for (only some algorithms support this feature.")
 			("levels", po::value<int>(), "The number of pyramid layers, including the initial image.")
 			;
 
 	po::options_description algo_gpu_common("GPU stereovision common options");
 	algo_gpu_common.add_options()("n_disp", po::value<int>(), "Number of disparities.")
 			("iterations", po::value<int>(), "Number of iterations of algorithm.")
-			("msg_type", po::value<int>(), "Type of message returned by algorithm.")
-			("max_data_term", po::value<float>(), "Truncation of data cost.")
-			("data_weight", po::value<float>(), "Data weight.")
-			("max_disc_term", po::value<float>(), "Truncation of discontinuity.")
-			("disc_single_jump", po::value<float>(), "Discontinuity single jump.")
+			("msg-type", po::value<int>(), "Type of message returned by algorithm.")
+			("max-data-term", po::value<float>(), "Truncation of data cost.")
+			("data-weight", po::value<float>(), "Data weight.")
+			("max-disc-term", po::value<float>(), "Truncation of discontinuity.")
+			("disc-single-jump", po::value<float>(), "Discontinuity single jump.")
 			;
 
 	po::options_description algo_stereo_bm("Block Maching options");
 	algo_stereo_bm.add_options()("sad-window-size,w",po::value<int>()->default_value(21), "Size of the square to search for matching features. Must be an ODD number.");
 
 	po::options_description algo_var("Var options");
-	algo_var.add_options()("pyr_scale", po::value<double>(), "Specifies the image scale (<1) to build the pyramids for each image.")
-			("n_it", po::value<int>(), "The number of iterations the algorithm does at each pyramid level.")
-			("poly_n", po::value<int>(), "Size of the pixel neighbourhood used to find polynomial expansion in each pixel.")
-			("poly_sigma", po::value<double>(), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
+	algo_var.add_options()("pyr-scale", po::value<double>(), "Specifies the image scale (<1) to build the pyramids for each image.")
+			("n-it", po::value<int>(), "The number of iterations the algorithm does at each pyramid level.")
+			("poly-n", po::value<int>(), "Size of the pixel neighbourhood used to find polynomial expansion in each pixel.")
+			("poly-sigma", po::value<double>(), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
 			("fi", po::value<float>(), "The smoothness parameter, or the weight coefficient for the smoothness term.")
 			("lambda", po::value<float>(), "The threshold parameter for edge-preserving smoothness.")
 			("penalization", po::value<int>(), "Possible values: PENALIZATION_TICHONOV - linear smoothness; PENALIZATION_CHARBONNIER - non-linear edge preserving smoothness; PENALIZATION_PERONA_MALIK - non-linear edge-enhancing smoothness. (check StereoVar documentation for actual values!)")
@@ -80,7 +88,7 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 //	algo_belief_propagation.add_options();
 
 	po::options_description algo_constant_space("Constant Space Belief Propagation options");
-	algo_constant_space.add_options()("nr_plane", po::value<int>(),"Number of disparity levels on the first level.");
+	algo_constant_space.add_options()("nr-plane", po::value<int>(),"Number of disparity levels on the first level.");
 
 	algo_all.add(algo_common)
 		.add(algo_gpu_common)
@@ -93,16 +101,20 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 		.add(calibration_options)
 		.add(algo_all);
 
-	string cfgFile = "config.cfg";
-	po::store(po::parse_command_line(argc, argv, *po_description), vm);
+	string cfgFile;
+	po::store(po::command_line_parser(argc, argv).options(*po_description).positional(pos_opt).run(), vm); 
+//	po::store(po::parse_command_line(argc, argv, *po_description), vm);
+	if(vm.count("config-file"))
 	try
 	{
+		cfgFile = vm["config-file"].as<string>();
 		po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
 	}
 	catch (boost::program_options::reading_file &e)
 	{
 		//No configuration file -- no biggie
-		cerr << "Can not read configuration file \'config.cfg\'\n";
+		cerr << "Can not read configuration file '" << cfgFile << "'\n";
+		return FAILURE;
 	}
 	po::notify(vm);
 
