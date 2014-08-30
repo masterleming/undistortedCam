@@ -392,9 +392,6 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 			camData.algorithmData.semiGlobalBM.mSpeckleWindowsSize = varMap["speckle-window-size"].as<int>();
 			camData.algorithmData.semiGlobalBM.mSpeckleRange = varMap["speckle-range"].as<int>();
 			camData.algorithmData.semiGlobalBM.mFullDP = varMap["full-dp"].as<bool>();
-
-			cerr << "\nSGBM is not yet implemented!\n";
-			return false;
 		}
 		else if (prgCfg.mAlgorithm == "var")
 		{
@@ -475,9 +472,6 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 
 			camData.algorithmData.gpuBlockMatching.mDisparities = varMap["disparities"].as<int>();
 			camData.algorithmData.gpuBlockMatching.mWindowSize = varMap["win-size"].as<int>();
-
-			cerr << "\nGPU_BM is not yet implemented!\n";
-			return false;
 		}
 		else if (prgCfg.mAlgorithm == "bp")
 		{

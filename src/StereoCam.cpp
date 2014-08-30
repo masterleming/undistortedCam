@@ -87,7 +87,17 @@ StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
 		device = new StereoContainer<StereoBM>(dev);
 		break;
 	case SM_SEMI_GLOBAL_BM:
-		throw "Semi global block matching is not yet supported!";
+		device = new StereoContainer<StereoSGBM>(new StereoSGBM(data.algorithmData.semiGlobalBM.mMinDisp,
+																data.algorithmData.semiGlobalBM.mDisparities,
+																data.algorithmData.semiGlobalBM.mSadWindowSize,
+																data.algorithmData.semiGlobalBM.mP1,
+																data.algorithmData.semiGlobalBM.mP2,
+																data.algorithmData.semiGlobalBM.mDisp12MaxDiff,
+																data.algorithmData.semiGlobalBM.mPreFilterCap,
+																data.algorithmData.semiGlobalBM.mUniquenessRatio,
+																data.algorithmData.semiGlobalBM.mSadWindowSize,
+																data.algorithmData.semiGlobalBM.mSpeckleRange,
+																data.algorithmData.semiGlobalBM.mFullDP));
 		break;
 	case SM_VAR:
 		device = new StereoContainer<StereoVar>(new StereoVar(data.algorithmData.var.mLevels,
@@ -104,7 +114,9 @@ StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
 																data.algorithmData.var.mFlags));
 		break;
 	case SM_GPU_BM:
-		throw "GPU BM is not yet implemented!";
+		device = new StereoContainer<gpu::StereoBM_GPU>(new gpu::StereoBM_GPU(data.algorithmData.gpuBlockMatching.mPreset,
+																				data.algorithmData.gpuBlockMatching.mDisparities,
+																				data.algorithmData.gpuBlockMatching.mWindowSize));
 		break;
 	case SM_BELIEF_PROPAGATION:
 		device = new StereoContainer<gpu::StereoBeliefPropagation>(new gpu::StereoBeliefPropagation(data.algorithmData.beliefPropagation.mDisparities,
@@ -277,9 +289,25 @@ void StereoCam::StereoContainer<StereoBM>::operator ()(const Mat &left, const Ma
 }
 
 template<>
+void StereoCam::StereoContainer<StereoSGBM>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	mStereoDevice->operator()(left, right, disparity);
+}
+
+template<>
 void StereoCam::StereoContainer<StereoVar>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
 {
 	mStereoDevice->operator ()(left, right, disparity);
+}
+
+template<>
+void StereoCam::StereoContainer<gpu::StereoBM_GPU>::operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype)
+{
+	gpu::GpuMat gpuLeft, gpuRight, gpuDisp(left.rows, left.cols, CV_8U);
+	gpuLeft.upload(left);
+	gpuRight.upload(right);
+	mStereoDevice->operator()(gpuLeft, gpuRight, gpuDisp);
+	gpuDisp.download(disparity);
 }
 
 template<>
