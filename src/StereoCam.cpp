@@ -12,38 +12,10 @@ using namespace std;
 
 stereoModeData::stereoModeData()
 {
-	mMode = SM_BLOCK_MACHING;
+	mMode = SM_INVALID;
 
 	camera.mCam1 = NULL;
 	camera.mCam2 = NULL;
-
-	common.mMaxDisp = -1;
-	common.mMinDisp = -1;
-	common.mLevels = -1;
-
-	gpuCommon.mNdisp = -1;
-	gpuCommon.mIters = -1;
-	gpuCommon.mMsgType = -1;
-	gpuCommon.mMaxDataTerm = -1;
-	gpuCommon.mDataWeight = -1;
-	gpuCommon.mMaxDiscTerm = -1;
-	gpuCommon.mDiscSingleJump = -1;
-
-	blockMaching.mSadWindowSize = -1;
-
-	var.mPyrScale = -1;
-	var.mnIt = -1;
-	var.mPolyN = -1;
-	var.mPolySigma = -1;
-	var.mFi = -1;
-	var.mLambda = -1;
-	var.mPenalization = -1;
-	var.mCycle = -1;
-	var.mFlags = -1;
-
-	//Belief Propagation
-
-	constantSpaceBP.mNrPlane = -1;
 }
 
 StereoCam::StereoCam()
@@ -99,29 +71,65 @@ StereoCam::iStereoDevice* StereoCam::createStereoDevice(stereoModeData &data)
 	switch (data.mMode)
 	{
 	case SM_BLOCK_MACHING:
-		dev = new StereoBM(StereoBM::BASIC_PRESET, data.common.mMaxDisp, data.blockMaching.mSadWindowSize);
-		dev->state->speckleWindowSize = 100;
-		dev->state->speckleRange = 32;
-		dev->state->disp12MaxDiff = 1;
+		dev = new StereoBM(data.algorithmData.blockMatching.mPreset,
+							data.algorithmData.blockMatching.mDisparities,
+							data.algorithmData.blockMatching.mSadWindowSize);
+		
+		if(data.algorithmData.blockMatching.mSpeckleWindowSize != -1)
+			dev->state->speckleWindowSize = data.algorithmData.blockMatching.mSpeckleWindowSize;
+
+		if(data.algorithmData.blockMatching.mSpeckleRange != -1)
+			dev->state->speckleRange = data.algorithmData.blockMatching.mSpeckleRange;
+
+		if(data.algorithmData.blockMatching.mDisp12MaxDiff != -1)
+			dev->state->disp12MaxDiff = data.algorithmData.blockMatching.mDisp12MaxDiff;
+
 		device = new StereoContainer<StereoBM>(dev);
 		break;
+	case SM_SEMI_GLOBAL_BM:
+		throw "Semi global block matching is not yet supported!";
+		break;
 	case SM_VAR:
-		device = new StereoContainer<StereoVar>(
-				new StereoVar(data.common.mLevels, data.var.mPyrScale, data.var.mnIt, data.common.mMinDisp, data.common.mMaxDisp, data.var.mPolyN,
-						data.var.mPolySigma, data.var.mFi, data.var.mLambda, data.var.mPenalization, data.var.mCycle, data.var.mFlags));
+		device = new StereoContainer<StereoVar>(new StereoVar(data.algorithmData.var.mLevels,
+																data.algorithmData.var.mPyrScale,
+																data.algorithmData.var.mIteratnions,
+																data.algorithmData.var.mMinDisp,
+																data.algorithmData.var.mMaxDisp,
+																data.algorithmData.var.mPolyN,
+																data.algorithmData.var.mPolySigma,
+																data.algorithmData.var.mFi,
+																data.algorithmData.var.mLambda,
+																data.algorithmData.var.mPenalization,
+																data.algorithmData.var.mCycle,
+																data.algorithmData.var.mFlags));
+		break;
+	case SM_GPU_BM:
+		throw "GPU BM is not yet implemented!";
 		break;
 	case SM_BELIEF_PROPAGATION:
-		device = new StereoContainer<gpu::StereoBeliefPropagation>(
-				new gpu::StereoBeliefPropagation(data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.gpuCommon.mMaxDataTerm,
-						data.gpuCommon.mDataWeight, data.gpuCommon.mMaxDiscTerm, data.gpuCommon.mDiscSingleJump, data.gpuCommon.mMsgType));
+		device = new StereoContainer<gpu::StereoBeliefPropagation>(new gpu::StereoBeliefPropagation(data.algorithmData.beliefPropagation.mDisparities,
+																									data.algorithmData.beliefPropagation.mIterations,
+																									data.algorithmData.beliefPropagation.mLevels,
+																									data.algorithmData.beliefPropagation.mMaxDataTerm,
+																									data.algorithmData.beliefPropagation.mDataWeight,
+																									data.algorithmData.beliefPropagation.mMaxDiscTerm,
+																									data.algorithmData.beliefPropagation.mDiscSingleJump,
+																									data.algorithmData.beliefPropagation.mMsgType));
 		break;
 	case SM_CONSTANT_SPACE_BP:
-		device = new StereoContainer<gpu::StereoConstantSpaceBP>(
-				new gpu::StereoConstantSpaceBP( data.gpuCommon.mNdisp, data.gpuCommon.mIters, data.common.mLevels, data.constantSpaceBP.mNrPlane,
-						data.gpuCommon.mMaxDataTerm, data.gpuCommon.mDataWeight, data.gpuCommon.mMaxDiscTerm, data.gpuCommon.mDiscSingleJump,
-						data.common.mMinDisp, data.gpuCommon.mMsgType));
+		device = new StereoContainer<gpu::StereoConstantSpaceBP>(new gpu::StereoConstantSpaceBP(data.algorithmData.beliefPropagation.mDisparities,
+																								data.algorithmData.beliefPropagation.mIterations,
+																								data.algorithmData.beliefPropagation.mLevels,
+																								data.algorithmData.beliefPropagation.mNrPlane,
+																								data.algorithmData.beliefPropagation.mMaxDataTerm,
+																								data.algorithmData.beliefPropagation.mDataWeight,
+																								data.algorithmData.beliefPropagation.mMaxDiscTerm,
+																								data.algorithmData.beliefPropagation.mDiscSingleJump,
+																								data.algorithmData.beliefPropagation.mMinDispTh,
+																								data.algorithmData.beliefPropagation.mMsgType));
 		break;
 	default:
+		throw "Unrecognised algorithm";
 		break;
 	}
 

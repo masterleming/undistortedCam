@@ -14,29 +14,27 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 	po_description = new po::options_description("Program options");
 
 	po_description->add_options()("config-file",po::value<string>(), "File containing configuration information to be used.")
-			("help,h", po::value<string>()->implicit_value("all"), "Prints help message. It may be specified to print:\n   \tall, basic, calib, modes, bm, sgbm, var, bp, cs.\nIf no argument is specified 'all' is presumed.")
+			("help,h", po::value<string>()->implicit_value("all"), "Prints help message. It may be specified to print:\n   \tall, basic, calib, modes, bm, sgbm, var, gpu-bm, bp, cs.\nIf no argument is specified 'all' is presumed.")
 			;
-
-	po::positional_options_description pos_opt;
-	pos_opt.add("config-file", 1);
 
 	po::options_description basic_options("Basic configuration");
 	basic_options.add_options()("mode,m", po::value<string>()->default_value("bm"), "Stereo algorithm to be used. Supported values are:"
-					"\n bm  - block maching"
-					"\n var - var"
-					"\n bp  - belief propagation"
-					"\n cs  - constant space")
-			("help,h", "Prints this help message.")
+					"\n bm     - block matching"
+					"\n sgbm   - semi global bm"
+					"\n var    - var"
+					"\n gpu-bm - gpu block matching"
+					"\n bp     - belief propagation"
+					"\n cs     - constant space")
 			("left,l", po::value<string>(), "Sets left image for static image stereo-vision.")
 			("right,r", po::value<string>(), "Sets right image for static image stereo-vision.")
 			("static,s", "Enables static image stereo-vision.")
 			("shifted", po::value<string>(),"Applies algorithm to two copies of the same image, one of which has a rectangular piece of image shifted in an arbitrary direction. Pass \"left\" to copy left picture or \"right\" to copy right picture")
 			("swap-cameras,S","Swaps cameras input so there is no need to move already positioned cameras.")
+			("skip", "Skips camera calibration.")
 			;
 
 	po::options_description calibration_options("Calibraton configuration");
-	calibration_options.add_options()("skip", "Skips camera calibration.")
-			("intrinsics,i", po::value<string>(), "Sets file containing intrinsics calibration parameters.")
+	calibration_options.add_options()("intrinsics,i", po::value<string>(), "Sets file containing intrinsics calibration parameters.")
 			("extrinsics,e", po::value<string>(), "Sets file containing extrinsics calibration parameters.")
 			("calibration-samples,c", po::value<int>()->default_value(25), "How many pictures shall be acquired for calibration.")
 			("delay,D",po::value<int>()->default_value(1000), "Delay between samples measured in milliseconds.")
@@ -47,63 +45,182 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 
 	po::options_description algo_all("Stereovision algorithms configuration");
 
-	po::options_description algo_common("Common stereovision configuration");
-	algo_common.add_options()("max-disp", po::value<int>(), "How many disparities shall be searched for. Allowed values are 0 and any integer multiplication of 16.")
-			("min-disp", po::value<int>(), "Minimal number to be searched for (only some algorithms support this feature.")
-			("levels", po::value<int>(), "The number of pyramid layers, including the initial image.")
+	po::options_description algo_bm("Block Matching options");
+	algo_bm.add_options()("sad-window-size,w",po::value<int>()->default_value(21), "Size of the square to search for matching features. Must be an ODD number.")
+			("disparities,d", po::value<int>()->default_value(48))
+			("preset", po::value<string>()->default_value("basic"), "Preset for options for different types of lenses, does not affect 'disparities' or 'sad-window-size'; available options are:\n   \tbasic, fish-eye, narrow.")
+			("speckle-window-size", po::value<int>()->default_value(-1), "Maximum size of smooth disparity regions to consider their noise speckles and invalidate. Set it to 0 to disable speckle filtering. Otherwise, set it somewhere in the 50-200 range.")
+			("speckle-range", po::value<int>()->default_value(-1), "Maximum disparity variation within each connected component. If you do speckle filtering, set the parameter to a positive value, it will be implicitly multiplied by 16")
+			("disp-12-max-diff", po::value<int>()->default_value(-1), "Maxumum allowed difference (in integer pixel units) in the left-right disparity check. Set it to a non-positiv value to disable the check.")
 			;
 
-	po::options_description algo_gpu_common("GPU stereovision common options");
-	algo_gpu_common.add_options()("n_disp", po::value<int>(), "Number of disparities.")
-			("iterations", po::value<int>(), "Number of iterations of algorithm.")
-			("msg-type", po::value<int>(), "Type of message returned by algorithm.")
-			("max-data-term", po::value<float>(), "Truncation of data cost.")
-			("data-weight", po::value<float>(), "Data weight.")
-			("max-disc-term", po::value<float>(), "Truncation of discontinuity.")
-			("disc-single-jump", po::value<float>(), "Discontinuity single jump.")
+	po::options_description algo_sgbm("Semi-Global Block Matching options");
+	algo_sgbm.add_options()("min-disp", po::value<int>()->default_value(0), "Minimum posible disparity value.")
+			("disparities,d", po::value<int>()->default_value(48), "Number of disparity levels to be separated. *MUST be dvivisible by 16.*")
+			("sad-window-size,w", po::value<int>()->default_value(11), "Size of a match block. *MUST be an odd number.*")
+			("p1,1", po::value<int>()->default_value(0), "Disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
+			("p2,2", po::value<int>()->default_value(0), "Another disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
+			("disp-12-max-diff", po::value<int>()->default_value(0), "Maxumum allowed difference (in integer pixel units) in the left-right disparity check. Set it to a non-positiv value to disable the check.")
+			("pre-filter-cap", po::value<int>()->default_value(0), "Truncation value for prefiltered image pixels. See OpenCV documentation for details.")
+			("uniqueness-ratio", po::value<int>()->default_value(0), "Marigin in percentage by which the best (minimum) cimputed cost function value should \"win\" the second best value to consider the found match correct.")
+			("speckle-window-size", po::value<int>()->default_value(0), "Maximum size of smooth disparity regions to consider their noise speckles and invalidate. Set it to 0 to disable speckle filtering. Otherwise, set it somewhere in the 50-200 range.")
+			("speckle-range", po::value<int>()->default_value(0), "Maximum disparity variation within each connected component. If you do speckle filtering, set the parameter to a positive value, it will be implicitly multiplied by 16")
+			("full-dp", po::value<bool>()->default_value(false), "Set it to true to run the full-scale two-pass dynamic programming algorithm. It will consume O(W*H*numDisparities) bytes, which is large for 640x480 stereo and huge for HD-size pictures.")
 			;
-
-	po::options_description algo_stereo_bm("Block Maching options");
-	algo_stereo_bm.add_options()("sad-window-size,w",po::value<int>()->default_value(21), "Size of the square to search for matching features. Must be an ODD number.");
 
 	po::options_description algo_var("Var options");
-	algo_var.add_options()("pyr-scale", po::value<double>(), "Specifies the image scale (<1) to build the pyramids for each image.")
-			("n-it", po::value<int>(), "The number of iterations the algorithm does at each pyramid level.")
-			("poly-n", po::value<int>(), "Size of the pixel neighbourhood used to find polynomial expansion in each pixel.")
-			("poly-sigma", po::value<double>(), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
-			("fi", po::value<float>(), "The smoothness parameter, or the weight coefficient for the smoothness term.")
-			("lambda", po::value<float>(), "The threshold parameter for edge-preserving smoothness.")
-			("penalization", po::value<int>(), "Possible values: PENALIZATION_TICHONOV - linear smoothness; PENALIZATION_CHARBONNIER - non-linear edge preserving smoothness; PENALIZATION_PERONA_MALIK - non-linear edge-enhancing smoothness. (check StereoVar documentation for actual values!)")
-			("cycle", po::value<int>(), "Type of the multigrid cycle. Possible values: CYCLE_O and CYCLE_V for null- and v-cycles respectively.")
-			("flags",po::value<int>(), "The operation flags; can be a combination of the following:"
-					"\nUSE_INITIAL_DISPARITY: Use the input flow as the initial flow approximation."
-					"\nUSE_EQUALIZE_HIST: Use the histogram equalization in the pre-processing phase."
-					"\nUSE_SMART_ID: Use the smart iteration distribution (SID)."
-					"\nUSE_AUTO_PARAMS: Allow the method to initialize the main parameters."
-					"\nUSE_MEDIAN_FILTERING: Use the median filer of the solution in the post processing phase."
-					"\nPASS SUM OF DESIRED FLAGS. For actual values check StereoVar.")
+	algo_var.add_options()("levels,L", po::value<int>()->default_value(4), "The number of pyramid layers, including the initial image.")
+			("pyr-scale", po::value<double>()->default_value(1.0), "Specifies the image scale (<1) to build the pyramids for each image.")
+			("iterations,I", po::value<int>()->default_value(4), "The number of iterations the algorithm does at each pyramid level.")
+			("min-disp", po::value<int>()->default_value(0), "Minimal possible value for disparity, may be negative one.")
+			("max-disp", po::value<int>()->default_value(48), "Maximal possible value for disparity.")
+			("poly-n", po::value<int>()->default_value(3), "Size of the pixel neighbourhood used to find polynomial expansion in each pixel.")
+			("poly-sigma", po::value<double>()->default_value(1), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
+			("fi", po::value<float>()->default_value(1), "The smoothness parameter, or the weight coefficient for the smoothness term.")
+			("lambda", po::value<float>()->default_value(0), "The threshold parameter for edge-preserving smoothness.")
+			("penalization", po::value<string>()->default_value("tichinov"), "Possible values:\n   \ttichinov, charbonnier,perona-malik")
+			("cycle", po::value<string>()->default_value("cycle-o"), "Type of the multigrid cycle. Possible values:\n   \tcycle-o and cycle-v.")
+			("flags",po::value<vector<string> >()->multitoken(), "The operation flags; can be a combination of the following:"
+					"\n   USE_INITIAL_DISPARITY: Use the input flow as the initial flow approximation."
+					"\n   USE_EQUALIZE_HIST: Use the histogram equalization in the pre-processing phase."
+					"\n   USE_SMART_ID: Use the smart iteration distribution (SID)."
+					"\n   USE_AUTO_PARAMS: Allow the method to initialize the main parameters."
+					"\n   USE_MEDIAN_FILTERING: Use the median filer of the solution in the post processing phase.")
 			;
 
-	po::options_description algo_belief_propagation("Belief Propagation options");
-//	algo_belief_propagation.add_options();
+	po::options_description algo_gpu_bm("GPU Block Matching options");
+	algo_gpu_bm.add_options()("preset", po::value<string>()->default_value("basic"), "Preset to be used, allowed values are:\n   \tbasic, xsobel.")
+			("disparities,d", po::value<int>()->default_value(48), "Number of disparities. *MUST be multiple of 8 and less or equal to 256.*")
+			("win-size", po::value<int>()->default_value(19), "Match block size.")
+			;
 
-	po::options_description algo_constant_space("Constant Space Belief Propagation options");
-	algo_constant_space.add_options()("nr-plane", po::value<int>(),"Number of disparity levels on the first level.");
+	po::options_description algo_gpu_bp("GPU Belief Propagation options");
+	algo_gpu_bp.add_options()("disparities,d", po::value<int>()->default_value(48), "Number of disparities")
+			("iterations,I", po::value<int>()->default_value(5), "Number of algorithm iterations on each level.")
+			("levels,L", po::value<int>()->default_value(4), "Number of levels.")
+			("nr-plane", po::value<int>()->default_value(4), "Number of disparity levels on the first level.")
+			("max-data-term", po::value<float>()->default_value(0), "Truncation of data cost.")
+			("data-weight", po::value<float>()->default_value(0), "Data weight.")
+			("max-disc-term", po::value<float>()->default_value(0), "Truncation of discontinuity.")
+			("disc-single-jump", po::value<float>()->default_value(0), "Discontinuity single jump.")
+			("msg-type", po::value<int>()->default_value(CV_32FC1), "Type of message returned by algorithm. *Only CV_16SC1 and CV_32FC1 types are supported.*")
+			;
 
-	algo_all.add(algo_common)
-		.add(algo_gpu_common)
-		.add(algo_stereo_bm)
+	po::options_description algo_gpu_cs("GPU Constant Space Belief Propagation options");
+	algo_gpu_cs.add_options()("disparities,d", po::value<int>()->default_value(128), "Number of disparities.")
+			("iterations,I", po::value<int>()->default_value(8), "Number of algorithm iterations on each level.")
+			("levels,L", po::value<int>()->default_value(4), "Number of levels.")
+			("nr-plane", po::value<int>()->default_value(4), "Number of disparity levels on the first level.")
+			("max-data-term", po::value<float>()->default_value(0), "Truncation of data cost.")
+			("data-weight", po::value<float>()->default_value(0), "Data weight.")
+			("max-disc-term", po::value<float>()->default_value(0), "Truncation of discontinuity.")
+			("disc-single-jump", po::value<float>()->default_value(0), "Discontinuity single jump.")
+			("min-disp-th", po::value<int>()->default_value(1), "Minimal disparity threshold.")
+			("msg-type", po::value<int>()->default_value(CV_32FC1), "Type of message returned by algorithm. *Only CV_16SC1 and CV_32FC1 types are supported.*")
+			;
+
+	algo_all.add(algo_bm)
+		.add(algo_sgbm)
 		.add(algo_var)
-		.add(algo_belief_propagation)
-		.add(algo_constant_space);
-
-	po_description->add(basic_options)
-		.add(calibration_options)
-		.add(algo_all);
+		.add(algo_gpu_bm)
+		.add(algo_gpu_bp)
+		.add(algo_gpu_cs);
 
 	string cfgFile;
-	po::store(po::command_line_parser(argc, argv).options(*po_description).positional(pos_opt).run(), vm); 
-//	po::store(po::parse_command_line(argc, argv, *po_description), vm);
+	po::parsed_options first_run = po::command_line_parser(argc, argv).options(*po_description).allow_unregistered().run();
+	po::store(first_run, vm);
+
+	vector<string> unrecognised = po::collect_unrecognized(first_run.options, po::include_positional);
+	cout << "unrecognised:\n";
+	for(vector<string>::iterator i = unrecognised.begin(); i != unrecognised.end(); i++)
+		cout << "\t" << *i << endl;
+
+	//Checking "global" options
+	//--checks for help message
+	if(vm.count("help"))
+	{
+		string topic = vm["help"].as<string>();
+		if(topic == "all")
+		{
+			//todo: add USAGE information
+			po_description->add(basic_options)
+				.add(calibration_options)
+				.add(algo_all);
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "basic")
+		{
+			po_description->add(basic_options);
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "calib")
+		{
+			po_description->add(calibration_options);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "modes")
+		{
+			po_description->add(algo_all);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "bm")
+		{
+			po_description->add(algo_bm);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "sgbm")
+		{
+			po_description->add(algo_sgbm);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "var")
+		{
+			po_description->add(algo_var);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "gpu-bm")
+		{
+			po_description->add(algo_gpu_bm);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "bp")
+		{
+			po_description->add(algo_gpu_bp);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else if(topic == "cs")
+		{
+			po_description->add(algo_gpu_cs);
+
+			cout << *po_description << endl;
+			return SUCCESS_CLOSE;
+		}
+		else
+		{
+			cerr << "Unknown help topic: '" << topic <<"'!\n";
+			return FAILURE;
+		}
+	}
+	po_description->add(basic_options);
+	po::store(po::command_line_parser(argc, argv).options(*po_description).allow_unregistered()/*.positional(pos_opt)*/.run(), vm);
+
+	//--checking for config file
 	if(vm.count("config-file"))
 	try
 	{
@@ -116,14 +233,63 @@ optionReadStatus programOptions(po::variables_map &vm, po::options_description *
 		cerr << "Can not read configuration file '" << cfgFile << "'\n";
 		return FAILURE;
 	}
-	po::notify(vm);
+	vm.notify();
 
-	if (vm.count("help"))
+	//Checking operation MODE
+	//--checking for calibration/static mode
+	if(!vm.count("static") && !vm.count("skip"))
 	{
-		cout << *po_description<< endl;
-		return SUCCESS_CLOSE;
+//		po_description->add(calibration_options);
+		po::store(po::command_line_parser(argc, argv).options(calibration_options).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+		vm.notify();
 	}
 
+
+	string opMode = vm["mode"].as<string>();
+	if(opMode == "bm")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_bm).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else if(opMode == "sgbm")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_sgbm).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else if(opMode == "var")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_var).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else if(opMode == "gpu-bm")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_gpu_bm).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else if(opMode == "bp")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_gpu_bp).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else if(opMode == "cs")
+	{
+		po::store(po::command_line_parser(argc, argv).options(algo_gpu_cs).allow_unregistered().run(), vm);
+		if(cfgFile != "")
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), *po_description, false), vm);
+	}
+	else
+	{
+		cerr << "Unrecognised stereo algorithm: '" << opMode << "'!\n";
+		return FAILURE;
+	}
+	po::notify(vm);
 	return SUCCESS;
 }
 
@@ -189,23 +355,168 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 	if (varMap.count("mode"))
 	{
 		prgCfg.mAlgorithm = varMap["mode"].as<string>();
-		if (prgCfg.mAlgorithm != "bm" && prgCfg.mAlgorithm != "var" && prgCfg.mAlgorithm != "bp" && prgCfg.mAlgorithm != "cs")
+		if (prgCfg.mAlgorithm == "bm")
 		{
-			cerr << "Invalid algorithm specified: " << prgCfg.mAlgorithm;
+			camData.mMode = SM_BLOCK_MACHING;
+			camData.algorithmData.blockMatching.mSadWindowSize = varMap["sad-window-size"].as<int>();
+			camData.algorithmData.blockMatching.mDisparities = varMap["disparities"].as<int>();
+			
+			string preset = varMap["preset"].as<string>();
+			if(preset == "basic")
+				camData.algorithmData.blockMatching.mPreset = StereoBM::BASIC_PRESET;
+			else if(preset == "fish-eye")
+				camData.algorithmData.blockMatching.mPreset = StereoBM::FISH_EYE_PRESET;
+			else if(preset == "narrow")
+				camData.algorithmData.blockMatching.mPreset = StereoBM::NARROW_PRESET;
+			else
+			{
+				cerr << "\nUnrecognised preset was specified: '" << preset << "'!\n";
+				return false;
+			}
+		
+			camData.algorithmData.blockMatching.mSpeckleWindowSize = varMap["speckle-window-size"].as<int>();
+			camData.algorithmData.blockMatching.mSpeckleRange = varMap["speckle-range"].as<int>();
+			camData.algorithmData.blockMatching.mDisp12MaxDiff = varMap["disp-12-max-diff"].as<int>();
+		}
+		else if (prgCfg.mAlgorithm == "sgbm")
+		{
+			camData.mMode = SM_SEMI_GLOBAL_BM;
+			camData.algorithmData.semiGlobalBM.mMinDisp = varMap["min-disp"].as<int>();
+			camData.algorithmData.semiGlobalBM.mDisparities = varMap["disparities"].as<int>();
+			camData.algorithmData.semiGlobalBM.mSadWindowSize = varMap["sad-window-size"].as<int>();
+			camData.algorithmData.semiGlobalBM.mP1 = varMap["p1"].as<int>();
+			camData.algorithmData.semiGlobalBM.mP2 = varMap["p2"].as<int>();
+			camData.algorithmData.semiGlobalBM.mDisp12MaxDiff = varMap["disp-12-max-diff"].as<int>();
+			camData.algorithmData.semiGlobalBM.mPreFilterCap = varMap["pre-filter-cap"].as<int>();
+			camData.algorithmData.semiGlobalBM.mUniquenessRatio = varMap["uniqueness-ratio"].as<int>();
+			camData.algorithmData.semiGlobalBM.mSpeckleWindowsSize = varMap["speckle-window-size"].as<int>();
+			camData.algorithmData.semiGlobalBM.mSpeckleRange = varMap["speckle-range"].as<int>();
+			camData.algorithmData.semiGlobalBM.mFullDP = varMap["full-dp"].as<bool>();
+
+			cerr << "\nSGBM is not yet implemented!\n";
 			return false;
 		}
-		if (prgCfg.mAlgorithm == "bm")
-			camData.mMode = SM_BLOCK_MACHING;
 		else if (prgCfg.mAlgorithm == "var")
+		{
 			camData.mMode = SM_VAR;
+			camData.algorithmData.var.mLevels = varMap["levels"].as<int>();
+			camData.algorithmData.var.mPyrScale = varMap["pyr-scale"].as<double>();
+			camData.algorithmData.var.mIteratnions = varMap["iterations"].as<int>();
+			camData.algorithmData.var.mMinDisp = varMap["min-disp"].as<int>();
+			camData.algorithmData.var.mMaxDisp = varMap["max-disp"].as<int>();
+			camData.algorithmData.var.mPolyN = varMap["poly-n"].as<int>();
+			camData.algorithmData.var.mPolySigma = varMap["poly-sigma"].as<double>();
+			camData.algorithmData.var.mFi = varMap["fi"].as<float>();
+			camData.algorithmData.var.mLambda = varMap["lambda"].as<float>();
+
+			string penalization = varMap["penalization"].as<string>();
+			if(penalization == "tichinov")
+				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_TICHONOV;
+			else if(penalization == "charbonnier")
+				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_CHARBONNIER;
+			else if(penalization == "perona-malik")
+				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_PERONA_MALIK;
+			else
+			{
+				cerr << "\nUnrecognised penalisation mode: '" << penalization << "'!\n";
+				return false;
+			}
+
+			string cycle = varMap["cycle"].as<string>();
+			if(cycle == "cycle-o")
+				camData.algorithmData.var.mCycle = StereoVar::CYCLE_O;
+			else if (cycle == "cycle-v")
+				camData.algorithmData.var.mCycle = StereoVar::CYCLE_V;
+			else
+			{
+				cerr << "\nUnrecognised cycle found: '" << cycle << "'!\n";
+				return false;
+			}
+
+			camData.algorithmData.var.mFlags = 0;
+			if(varMap.count("flags"))
+			{
+				vector<string> flags = varMap["flags"].as<vector<string> >();
+			
+				for(vector<string>::iterator i = flags.begin(); i != flags.end(); i++)
+				{
+					if(*i == "USE_INITIAL_DISPARITY")
+						camData.algorithmData.var.mFlags |= StereoVar::USE_INITIAL_DISPARITY;
+					else if(*i == "USE_EQUALIZE_HIST")
+						camData.algorithmData.var.mFlags |= StereoVar::USE_EQUALIZE_HIST;
+					else if(*i == "USE_SMART_ID")
+						camData.algorithmData.var.mFlags |= StereoVar::USE_SMART_ID;
+					else if(*i == "USE_AUTO_PARAMS")
+						camData.algorithmData.var.mFlags |= StereoVar::USE_AUTO_PARAMS;
+					else if(*i == "USE_MEDIAN_FILTERING")
+						camData.algorithmData.var.mFlags |= StereoVar::USE_MEDIAN_FILTERING;
+					else
+					{
+						cerr << "\nUnrecognised flag found: '" << *i << "'!\n";
+						return false;
+					}
+				}
+			}
+		}
+		else if (prgCfg.mAlgorithm == "gpu-bm")
+		{
+			camData.mMode = SM_GPU_BM;
+
+			string preset = varMap["preset"].as<string>();
+			if(preset == "basic")
+				camData.algorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::BASIC_PRESET;
+			else if(preset == "xsobel")
+				camData.algorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
+			else
+			{
+				cerr << "\nUnrecognised preset found: '" << preset << "'!\n";
+				return false;
+			}
+
+			camData.algorithmData.gpuBlockMatching.mDisparities = varMap["disparities"].as<int>();
+			camData.algorithmData.gpuBlockMatching.mWindowSize = varMap["win-size"].as<int>();
+
+			cerr << "\nGPU_BM is not yet implemented!\n";
+			return false;
+		}
 		else if (prgCfg.mAlgorithm == "bp")
+		{
 			camData.mMode = SM_BELIEF_PROPAGATION;
+			camData.algorithmData.beliefPropagation.mDisparities = varMap["disparities"].as<int>();
+			camData.algorithmData.beliefPropagation.mIterations = varMap["iterations"].as<int>();
+			camData.algorithmData.beliefPropagation.mLevels = varMap["levels"].as<int>();
+			camData.algorithmData.beliefPropagation.mNrPlane = varMap["nr-plane"].as<int>();
+			camData.algorithmData.beliefPropagation.mMaxDataTerm = varMap["max-data-term"].as<float>();
+			camData.algorithmData.beliefPropagation.mDataWeight = varMap["data-weight"].as<float>();
+			camData.algorithmData.beliefPropagation.mMaxDiscTerm = varMap["max-disc-term"].as<float>();
+			camData.algorithmData.beliefPropagation.mDiscSingleJump = varMap["disc-single-jump"].as<float>();
+			camData.algorithmData.beliefPropagation.mMsgType = varMap["msg-type"].as<int>();
+
+		}
 		else if (prgCfg.mAlgorithm == "cs")
+		{
 			camData.mMode = SM_CONSTANT_SPACE_BP;
+			camData.mMode = SM_BELIEF_PROPAGATION;
+			camData.algorithmData.beliefPropagation.mDisparities = varMap["disparities"].as<int>();
+			camData.algorithmData.beliefPropagation.mIterations = varMap["iterations"].as<int>();
+			camData.algorithmData.beliefPropagation.mLevels = varMap["levels"].as<int>();
+			camData.algorithmData.beliefPropagation.mNrPlane = varMap["nr-plane"].as<int>();
+			camData.algorithmData.beliefPropagation.mMaxDataTerm = varMap["max-data-term"].as<float>();
+			camData.algorithmData.beliefPropagation.mDataWeight = varMap["data-weight"].as<float>();
+			camData.algorithmData.beliefPropagation.mMaxDiscTerm = varMap["max-disc-term"].as<float>();
+			camData.algorithmData.beliefPropagation.mDiscSingleJump = varMap["disc-single-jump"].as<float>();
+			camData.algorithmData.beliefPropagation.mMinDispTh = varMap["min-disp-th"].as<int>();
+			camData.algorithmData.beliefPropagation.mMsgType = varMap["msg-type"].as<int>();
+		}
+		else
+		{
+			cerr << "\nInvalid algorithm specified: '" << prgCfg.mAlgorithm << "'!\n";
+			return false;
+		}
 	}
 	else
 	{
-		cerr << "No algorithm specified!";
+		cerr << "\nNo algorithm specified!\n";
 		return false;
 	}
 
@@ -219,6 +530,7 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 		prgCfg.mStatic = true;
 		prgCfg.mLeft = varMap["left"].as<string>();
 		prgCfg.mRight = varMap["right"].as<string>();
+		calibCfg.mSkip = true;
 	}
 
 	if (varMap.count("shifted"))
@@ -273,69 +585,6 @@ bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &ca
 	}
 
 	calibCfg.mBoardSize = Size(calibCfg.mBoardWidth, calibCfg.mBoardHeight);
-	/////////////////////////////////////////////////////////////////
-	if (varMap.count("max_disp"))
-		camData.common.mMaxDisp = varMap["max_disp"].as<int>();
-
-	if (varMap.count("min_disp"))
-		camData.common.mMinDisp = varMap["min_disp"].as<int>();
-
-	if (varMap.count("levels"))
-		camData.common.mLevels = varMap["levels"].as<int>();
-	/////////////////////////////////////////////////////////////////
-	if (varMap.count("n_disp"))
-		camData.gpuCommon.mNdisp = varMap["n_disp"].as<int>();
-
-	if (varMap.count("iterations"))
-		camData.gpuCommon.mIters = varMap["iterations"].as<int>();
-
-	if (varMap.count("msg_type"))
-		camData.gpuCommon.mMsgType = varMap["msg_type"].as<int>();
-
-	if (varMap.count("max_data_term"))
-		camData.gpuCommon.mMaxDataTerm = varMap["max_data_term"].as<float>();
-
-	if (varMap.count("data_weight"))
-		camData.gpuCommon.mDataWeight = varMap["data_weight"].as<float>();
-
-	if (varMap.count("max_disc_term"))
-		camData.gpuCommon.mMaxDiscTerm = varMap["max_disc_term"].as<float>();
-
-	if (varMap.count("disc_single_jump"))
-		camData.gpuCommon.mDiscSingleJump = varMap["disc_single_jump"].as<float>();
-	///////////////////////////////////////////////////////////////////
-	if (varMap.count("sad-window-size"))
-		camData.blockMaching.mSadWindowSize = varMap["sad-window-size"].as<int>();
-	///////////////////////////////////////////////////////////////////
-	if (varMap.count("pyr_scale"))
-		camData.var.mPyrScale = varMap["pyr_scale"].as<double>();
-
-	if (varMap.count("n_it"))
-		camData.var.mnIt = varMap["n_it"].as<int>();
-
-	if (varMap.count("poly_n"))
-		camData.var.mPolyN = varMap["poly_n"].as<int>();
-
-	if (varMap.count("poly_sigma"))
-		camData.var.mPolySigma = varMap["poly_sigma"].as<double>();
-
-	if (varMap.count("fi"))
-		camData.var.mFi = varMap["fi"].as<float>();
-
-	if (varMap.count("lambda"))
-		camData.var.mLambda = varMap["lambda"].as<float>();
-
-	if (varMap.count("penalization"))
-		camData.var.mPenalization = varMap["penalization"].as<int>();
-
-	if (varMap.count("cycle"))
-		camData.var.mCycle = varMap["cycle"].as<int>();
-
-	if (varMap.count("flags"))
-		camData.var.mFlags = varMap["flags"].as<int>();
-	//////////////////////////////////////////////////////////////////////
-	if (varMap.count("nr_plane"))
-		camData.constantSpaceBP.mNrPlane = varMap["nr_plane"].as<int>();
 
 	return true;
 }

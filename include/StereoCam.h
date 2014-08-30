@@ -20,7 +20,13 @@ using namespace cv;
 
 enum StereoMode
 {
-	SM_BLOCK_MACHING = 0, SM_VAR, SM_BELIEF_PROPAGATION, SM_CONSTANT_SPACE_BP
+	SM_INVALID = -1,
+	SM_BLOCK_MACHING = 0,
+	SM_VAR,
+	SM_BELIEF_PROPAGATION,
+	SM_CONSTANT_SPACE_BP,
+	SM_SEMI_GLOBAL_BM,
+	SM_GPU_BM
 };
 
 struct camData
@@ -48,6 +54,68 @@ public:
 
 struct stereoModeData
 {
+	struct blockMaching_data
+	{
+		int mSadWindowSize;
+		int mDisparities;
+		int mPreset;
+		int mSpeckleWindowSize;
+		int mSpeckleRange;
+		int mDisp12MaxDiff;
+	};
+
+	struct semiGlobalBM_data
+	{
+		int mMinDisp;
+		int mDisparities;
+		int mSadWindowSize;
+		int mP1;
+		int mP2;
+		int mDisp12MaxDiff;
+		int mPreFilterCap;
+		int mUniquenessRatio;
+		int mSpeckleWindowsSize;
+		int mSpeckleRange;
+		int mFullDP;
+	};
+
+	struct var_data
+	{
+		int mLevels;
+		double mPyrScale;
+		int mIteratnions;
+		int mMinDisp;
+		int mMaxDisp;
+		int mPolyN;
+		double mPolySigma;
+		float mFi;
+		float mLambda;
+		int mPenalization;
+		int mCycle;
+		int mFlags;
+	};
+
+	struct gpuBlockMatching_data
+	{
+		int mPreset;
+		int mDisparities;
+		int mWindowSize;
+	};
+
+	struct beliefPropagation_data
+	{
+		int mDisparities;
+		int mIterations;
+		int mLevels;
+		int mNrPlane;
+		float mMaxDataTerm;
+		float mDataWeight;
+		float mMaxDiscTerm;
+		float mDiscSingleJump;
+		int mMinDispTh;
+		int mMsgType;
+	};
+
 	StereoMode mMode;
 	struct
 	{
@@ -58,50 +126,14 @@ struct stereoModeData
 		Mat Q;
 	} camera;
 
-	struct
+	union
 	{
-		int mMaxDisp;
-		int mMinDisp;
-		int mLevels;
-	} common;
-
-	struct
-	{
-		int mNdisp;
-		int mIters;
-		int mMsgType;
-		float mMaxDataTerm;
-		float mDataWeight;
-		float mMaxDiscTerm;
-		float mDiscSingleJump;
-	} gpuCommon;
-
-	struct
-	{
-		int mSadWindowSize;
-	} blockMaching;
-
-	struct
-	{
-		double mPyrScale;
-		int mnIt;
-		int mPolyN;
-		double mPolySigma;
-		float mFi;
-		float mLambda;
-		int mPenalization;
-		int mCycle;
-		int mFlags;
-	} var;
-
-	struct
-	{
-	} beliefPropagation;
-
-	struct
-	{
-		int mNrPlane;
-	} constantSpaceBP;
+		blockMaching_data blockMatching;
+		semiGlobalBM_data semiGlobalBM;
+		var_data var;
+		gpuBlockMatching_data gpuBlockMatching;
+		beliefPropagation_data beliefPropagation;
+	} algorithmData;
 
 public:
 	stereoModeData();
