@@ -3,6 +3,7 @@ add_executable(undistortedCam
 	StereoCam.cpp
 	main.cpp
 	undistorted_cam.cpp
+	ConfigParser.cpp
 )
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})

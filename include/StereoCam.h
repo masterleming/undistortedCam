@@ -76,7 +76,7 @@ struct stereoModeData
 		int mUniquenessRatio;
 		int mSpeckleWindowsSize;
 		int mSpeckleRange;
-		int mFullDP;
+		bool mFullDP;
 	};
 
 	struct var_data

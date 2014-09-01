@@ -9,7 +9,7 @@
 #include "undistorted_cam.h"
 #include "StereoCam.h"
 
-optionReadStatus programOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv)
+optionReadStatus readProgramOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv)
 {
 	po_description = new po::options_description("Program options");
 

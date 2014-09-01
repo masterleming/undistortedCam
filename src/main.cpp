@@ -6,14 +6,16 @@
  */
 
 #include <iostream>
-#include "undistorted_cam.h"
+#include "ConfigParser.h"
 
 int main(int argc, char **argv)
 {
-	//Parsing program options from command line.
-	po::variables_map varMap;
-	po::options_description *config = NULL;
-	switch (programOptions(varMap, config, argc, argv))
+	calibrationCfg calibInfo;
+	programCfg programInfo;
+	stereoModeData stereoModeInfo;
+	
+	ConfigParser cp(argc, argv);
+	switch (cp.parse(calibInfo, programInfo, stereoModeInfo))
 	{
 	case SUCCESS:
 		break;
@@ -23,29 +25,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//parameters that can be defined using command line options.
-//	Size boardSize = Size(9, 6);
-
-	calibrationCfg calibInfo;
-	programCfg programInfo;
-	stereoModeData stereoModeInfo;
-
-	//Retrieving parsed command line options.
-	if (!getRuntimeConfiguration(varMap, calibInfo, programInfo, stereoModeInfo))
-	{
-		cerr << "\nThis program options may be specified both from the command line and config.cfg file:\n"
-				<< "(parameters specified in console override those from file)\n";
-		config->print(cerr);
-		cerr << endl;
-		return 3;
-	}
-
 	//Camera handlers
 	VideoCapture capture1(0), capture2(1);
 	camData cam1(NULL), cam2(NULL);
 	camPoints points1, points2;
 
-	//Setting intrinsics camera parameters (either from file or default (neutral) ones.
+	//Setting intrinsics camera parameters (either from file or default (neutral) ones).
 	initIntrinsicsCamParams(programInfo.mSwapCameras, cam1, cam2, programInfo.mIntrinsics, capture1, capture2);
 
 	cvNamedWindow("Cam1", CV_WINDOW_AUTOSIZE);
@@ -58,7 +43,7 @@ int main(int argc, char **argv)
 	cam1.mSize = frame1.size();
 	cam2.mSize = frame2.size();
 
-	Size newSize(2 * frame1.cols, 2 * frame1.rows), oldSize(frame2.cols, frame2.rows);
+	Size oldSize(frame2.cols, frame2.rows);
 
 	//Acquiring camera extrinsics parameters either from calibration or restoring from file.
 	//Alternatively this step may be skipped or omitted if '--skip' parameter is passed, or [esc]

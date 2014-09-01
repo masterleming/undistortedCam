@@ -29,7 +29,7 @@ struct calibrationCfg
 	bool mSkip;
 	int mCalibSamples;
 	int mDelay;
-	double mSquareSize;
+	float mSquareSize;
 	int mBoardWidth;
 	int mBoardHeight;
 	Size mBoardSize;
@@ -71,7 +71,7 @@ public:
 	}
 };
 
-optionReadStatus programOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv);
+optionReadStatus readProgramOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv);
 
 //void getRuntimeConfiguration(const po::variables_map& varMap, bool& staticImages, string& leftImg, string& rightImg, bool& skipCalib,
 //		int& disparitiesCnt, int& sadWindowSize, int& sampleNums, int& delay, float& squareSize, Size& boardSize, bool& swapCameras,
