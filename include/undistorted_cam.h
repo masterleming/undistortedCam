@@ -71,14 +71,6 @@ public:
 	}
 };
 
-optionReadStatus readProgramOptions(po::variables_map &vm, po::options_description *&po_description, int argc, char **argv);
-
-//void getRuntimeConfiguration(const po::variables_map& varMap, bool& staticImages, string& leftImg, string& rightImg, bool& skipCalib,
-//		int& disparitiesCnt, int& sadWindowSize, int& sampleNums, int& delay, float& squareSize, Size& boardSize, bool& swapCameras,
-//		string& intrParamsFile, string& extrParamsFile, StereoCam::SHIFT_CAM &dir);
-
-bool getRuntimeConfiguration(const po::variables_map& varMap, calibrationCfg &calibCfg, programCfg &prgCfg, stereoModeData &camData);
-
 void initIntrinsicsCamParams(bool swapCameras, camData &cam1, camData &cam2, const string& intrParamsFile, VideoCapture& capture1,
 		VideoCapture& capture2);
 
