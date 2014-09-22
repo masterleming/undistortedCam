@@ -172,7 +172,7 @@ private:
 	class StereoContainer: public iStereoDevice
 	{
 	private:
-		T* mStereoDevice;
+		T mStereoDevice;
 
 		StereoContainer()
 		{
@@ -180,23 +180,24 @@ private:
 		}
 
 	public:
-		StereoContainer(T* device)
-				: iStereoDevice(), mStereoDevice(device)
-		{
-		}
+		StereoContainer(stereoModeData &data);
+
 		~StereoContainer()
 		{
-			if (mStereoDevice != NULL)
-			{
-				delete mStereoDevice;
-				mStereoDevice = NULL;
-			}
 		}
 
 		void operator ()(const Mat &left, const Mat &right, Mat &disparity, int disptype);
 	};
 
-	static iStereoDevice* createStereoDevice(stereoModeData &data);
+	class StereoFactory
+	{
+	private:
+		StereoFactory()
+		{
+		};
+	public:
+		static iStereoDevice* createStereoDevice(stereoModeData &data);
+	};
 
 private:
 	stereoModeData mData;

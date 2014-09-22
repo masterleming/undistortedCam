@@ -272,7 +272,7 @@ optionReadStatus ConfigParser::readProgramOptions()
 	try
 	{
 		cfgFile = mVarMap["config-file"].as<string>();
-		po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+		po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, true), mVarMap);
 	}
 	catch (boost::program_options::reading_file &e)
 	{
@@ -289,7 +289,7 @@ optionReadStatus ConfigParser::readProgramOptions()
 //		po_description.add(calibration_options);
 		po::store(po::command_line_parser(mArgc, mArgv).options(calibration_options).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, true), mVarMap);
 		mVarMap.notify();
 	}
 
@@ -299,37 +299,37 @@ optionReadStatus ConfigParser::readProgramOptions()
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_bm).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_bm, true), mVarMap);
 	}
 	else if(opMode == "sgbm")
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_sgbm).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_sgbm, true), mVarMap);
 	}
 	else if(opMode == "var")
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_var).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_var, true), mVarMap);
 	}
 	else if(opMode == "gpu-bm")
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_gpu_bm).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_gpu_bm, true), mVarMap);
 	}
 	else if(opMode == "bp")
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_gpu_bp).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_gpu_bp, true), mVarMap);
 	}
 	else if(opMode == "cs")
 	{
 		po::store(po::command_line_parser(mArgc, mArgv).options(algo_gpu_cs).allow_unregistered().run(), mVarMap);
 		if(cfgFile != "")
-			po::store(po::parse_config_file<char>(cfgFile.c_str(), po_description, false), mVarMap);
+			po::store(po::parse_config_file<char>(cfgFile.c_str(), algo_gpu_cs, true), mVarMap);
 	}
 	else
 	{

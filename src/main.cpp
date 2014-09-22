@@ -101,8 +101,6 @@ int main(int argc, char **argv)
 
 	cvNamedWindow("StereoCam", CV_WINDOW_AUTOSIZE);
 
-	Mat gray1(oldSize, CV_8UC1), gray2(oldSize, CV_8UC1);
-
 	int waitPeriod = (programInfo.mStatic ? 0 : 33);
 
 	// Live display
