@@ -7,6 +7,7 @@
 
 #include "StereoCam.h"
 #include <iostream>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace std;
 
@@ -62,38 +63,6 @@ StereoCam::~StereoCam()
 		delete mStereoDevice;
 		mStereoDevice = NULL;
 	}
-}
-
-StereoCam::iStereoDevice* StereoCam::StereoFactory::createStereoDevice(stereoModeData &data)
-{
-	iStereoDevice *device = NULL;
-	StereoBM *dev = NULL;
-	switch (data.mMode)
-	{
-	case SM_BLOCK_MACHING:
-		device = new StereoContainer<StereoBM>(data);
-		break;
-	case SM_SEMI_GLOBAL_BM:
-		device = new StereoContainer<StereoSGBM>(data);
-		break;
-	case SM_VAR:
-		device = new StereoContainer<StereoVar>(data);
-		break;
-	case SM_GPU_BM:
-		device = new StereoContainer<gpu::StereoBM_GPU>(data);
-		break;
-	case SM_BELIEF_PROPAGATION:
-		device = new StereoContainer<gpu::StereoBeliefPropagation>(data);
-		break;
-	case SM_CONSTANT_SPACE_BP:
-		device = new StereoContainer<gpu::StereoConstantSpaceBP>(data);
-		break;
-	default:
-		throw "Unrecognised algorithm";
-		break;
-	}
-
-	return device;
 }
 
 void StereoCam::process(bool skipRemap)
@@ -217,6 +186,8 @@ void StereoCam::process(bool skipRemap)
 	imshow(mWindow1, gray1);
 	imshow(mWindow2, gray2);
 	imshow(mDisparityWindow, dispFrame8);
+
+	StereoFactory::saveOutput(mData, dispFrame8);
 }
 
 const Mat& StereoCam::getR()
@@ -232,6 +203,136 @@ const Mat& StereoCam::getT()
 const Mat& StereoCam::getQ()
 {
 	return mData.camera.Q;
+}
+
+// --- StereoCam::StereoFactory ---
+StereoCam::iStereoDevice* StereoCam::StereoFactory::createStereoDevice(stereoModeData &data)
+{
+	iStereoDevice *device = NULL;
+	StereoBM *dev = NULL;
+	switch (data.mMode)
+	{
+	case SM_BLOCK_MACHING:
+		device = new StereoContainer<StereoBM>(data);
+		break;
+	case SM_SEMI_GLOBAL_BM:
+		device = new StereoContainer<StereoSGBM>(data);
+		break;
+	case SM_VAR:
+		device = new StereoContainer<StereoVar>(data);
+		break;
+	case SM_GPU_BM:
+		device = new StereoContainer<gpu::StereoBM_GPU>(data);
+		break;
+	case SM_BELIEF_PROPAGATION:
+		device = new StereoContainer<gpu::StereoBeliefPropagation>(data);
+		break;
+	case SM_CONSTANT_SPACE_BP:
+		device = new StereoContainer<gpu::StereoConstantSpaceBP>(data);
+		break;
+	default:
+		throw "Unrecognised algorithm";
+		break;
+	}
+
+	return device;
+}
+
+void StereoCam::StereoFactory::saveOutput(stereoModeData &data, Mat &img)
+{
+using namespace boost::posix_time;
+	
+	ptime now = microsec_clock::local_time();
+
+	time_facet *tf = new time_facet("%Y-%m-%d %H-%M-%S%F");
+	stringstream ss;
+	ss.imbue(locale(locale::classic(), tf));
+	ss << "output/" << now;
+	FileStorage fs;
+
+	switch(data.mMode)
+	{
+	case SM_BLOCK_MACHING:
+		ss << " BM";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mSadWindowSize" << data.mAlgorithmData.blockMatching.mSadWindowSize
+			<< "mDisparities" << data.mAlgorithmData.blockMatching.mDisparities
+			<< "mPreset" << data.mAlgorithmData.blockMatching.mPreset
+			<< "mSpeckleWindowSize" << data.mAlgorithmData.blockMatching.mSpeckleWindowSize
+			<< "mSpeckleRange" << data.mAlgorithmData.blockMatching.mSpeckleRange
+			<< "mDisp12MaxDiff" << data.mAlgorithmData.blockMatching.mDisp12MaxDiff;
+		break;
+	case SM_SEMI_GLOBAL_BM:
+		ss << " SGBM";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mMinDisp" << data.mAlgorithmData.semiGlobalBM.mMinDisp
+			<< "mDisparities" << data.mAlgorithmData.semiGlobalBM.mDisparities
+			<< "mSadWindowSize" << data.mAlgorithmData.semiGlobalBM.mSadWindowSize
+			<< "mP1" << data.mAlgorithmData.semiGlobalBM.mP1
+			<< "mP2" << data.mAlgorithmData.semiGlobalBM.mP2
+			<< "mDisp12MaxDiff" << data.mAlgorithmData.semiGlobalBM.mDisp12MaxDiff
+			<< "mPreFilterCap" << data.mAlgorithmData.semiGlobalBM.mPreFilterCap
+			<< "mUniquenessRatio" << data.mAlgorithmData.semiGlobalBM.mUniquenessRatio
+			<< "mSpeckleWindowsSize" << data.mAlgorithmData.semiGlobalBM.mSpeckleWindowsSize
+			<< "mSpeckleRange" << data.mAlgorithmData.semiGlobalBM.mSpeckleRange
+			<< "mFullDP" << data.mAlgorithmData.semiGlobalBM.mFullDP;
+		break;
+	case SM_VAR:
+		ss << " VAR";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mLevels" << data.mAlgorithmData.var.mLevels
+			<< "mPyrScale" << data.mAlgorithmData.var.mPyrScale
+			<< "mIteratnions" << data.mAlgorithmData.var.mIteratnions
+			<< "mMinDisp" << data.mAlgorithmData.var.mMinDisp
+			<< "mMaxDisp" << data.mAlgorithmData.var.mMaxDisp
+			<< "mPolyN" << data.mAlgorithmData.var.mPolyN
+			<< "mPolySigma" << data.mAlgorithmData.var.mPolySigma
+			<< "mFi" << data.mAlgorithmData.var.mFi
+			<< "mLambda" << data.mAlgorithmData.var.mLambda
+			<< "mPenalization" << data.mAlgorithmData.var.mPenalization
+			<< "mCycle" << data.mAlgorithmData.var.mCycle
+			<< "mFlags" << data.mAlgorithmData.var.mFlags;
+		break;
+	case SM_GPU_BM:
+		ss << " GPU-BM";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mPreset" << data.mAlgorithmData.gpuBlockMatching.mPreset
+			<< "mDisparities" << data.mAlgorithmData.gpuBlockMatching.mDisparities
+			<< "mWindowSize" << data.mAlgorithmData.gpuBlockMatching.mWindowSize;
+		break;
+	case SM_BELIEF_PROPAGATION:
+		ss << " BP";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mDisparities" << data.mAlgorithmData.beliefPropagation.mDisparities
+			<< "mIterations" << data.mAlgorithmData.beliefPropagation.mIterations
+			<< "mLevels" << data.mAlgorithmData.beliefPropagation.mLevels
+			<< "mMaxDataTerm" << data.mAlgorithmData.beliefPropagation.mMaxDataTerm
+			<< "mDataWeight" << data.mAlgorithmData.beliefPropagation.mDataWeight
+			<< "mMaxDiscTerm" << data.mAlgorithmData.beliefPropagation.mMaxDiscTerm
+			<< "mDiscSingleJump" << data.mAlgorithmData.beliefPropagation.mDiscSingleJump
+			<< "mMsgType" << data.mAlgorithmData.beliefPropagation.mMsgType;
+		break;
+	case SM_CONSTANT_SPACE_BP:
+		ss << " CSBP";
+		fs.open(ss.str() + ".yml", FileStorage::WRITE);
+		fs << "mDisparities" << data.mAlgorithmData.beliefPropagation.mDisparities
+			<< "mIterations" << data.mAlgorithmData.beliefPropagation.mIterations
+			<< "mLevels" << data.mAlgorithmData.beliefPropagation.mLevels
+			<< "mNrPlane" << data.mAlgorithmData.beliefPropagation.mNrPlane
+			<< "mMaxDataTerm" << data.mAlgorithmData.beliefPropagation.mMaxDataTerm
+			<< "mDataWeight" << data.mAlgorithmData.beliefPropagation.mDataWeight
+			<< "mMaxDiscTerm" << data.mAlgorithmData.beliefPropagation.mMaxDiscTerm
+			<< "mDiscSingleJump" << data.mAlgorithmData.beliefPropagation.mDiscSingleJump
+			<< "mMinDispTh" << data.mAlgorithmData.beliefPropagation.mMinDispTh
+			<< "mMsgType" << data.mAlgorithmData.beliefPropagation.mMsgType;
+		break;
+	default:
+		throw "Unrecognised algorithm";
+		break;
+	}
+
+	imwrite(ss.str() + ".png", img);
+	fs.release();
 }
 
 // --- StereoCam::StereoContainer ---

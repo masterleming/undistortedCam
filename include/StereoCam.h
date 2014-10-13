@@ -200,6 +200,7 @@ private:
 		};
 	public:
 		static iStereoDevice* createStereoDevice(stereoModeData &data);
+		static void saveOutput(stereoModeData &data, Mat &img);
 	};
 
 private:

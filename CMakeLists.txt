@@ -14,7 +14,7 @@ set (OutputName undistortedCam)
 #  "${PROJECT_BINARY_DIR}/MT_OpenCV_UndistortedCamConfig.h"
 #  )
 
-find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(Boost REQUIRED COMPONENTS program_options date_time)
 #find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc features2d calib3d contrib gpu)
 
 # add the binary tree to the search path for include files
