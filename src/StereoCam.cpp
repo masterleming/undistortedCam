@@ -191,23 +191,28 @@ void StereoCam::process(bool skipRemap)
 	int64 t = getTickCount();
 	(*mStereoDevice)(gray1, gray2, dispFrame, CV_16S); //CV_32F);
     t = getTickCount() - t;
-	cout << "Time elapsed: " << t*1000/getTickFrequency() << endl;
+//	cout << "Time elapsed: " << t*1000/getTickFrequency() << endl;
 
 	double min, max;
 
 	Mat dispFrame8;
 
 	minMaxIdx(dispFrame, &min, &max);
-	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+
+	dispFrame = (255 * (dispFrame - min)) / (max - min);
+//	minMaxIdx(dispFrame, &min, &max);
+//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+
 
 	dispFrame.convertTo(dispFrame8, CV_8U);
-	minMaxIdx(dispFrame8, &min, &max);
-	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
-
-	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
-	
-	minMaxIdx(dispFrame8, &min, &max);
-	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+//	minMaxIdx(dispFrame8, &min, &max);
+//	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+//
+//	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
+//	
+//	minMaxIdx(dispFrame8, &min, &max);
+//	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
 
 	imshow(mWindow1, gray1);
 	imshow(mWindow2, gray2);
@@ -234,18 +239,18 @@ const Mat& StereoCam::getQ()
 template<>
 StereoCam::StereoContainer<StereoBM>::StereoContainer(stereoModeData &data)
 {
-		mStereoDevice = StereoBM(data.algorithmData.blockMatching.mPreset,
-							data.algorithmData.blockMatching.mDisparities,
-							data.algorithmData.blockMatching.mSadWindowSize);
+		mStereoDevice = StereoBM(data.mAlgorithmData.blockMatching.mPreset,
+							data.mAlgorithmData.blockMatching.mDisparities,
+							data.mAlgorithmData.blockMatching.mSadWindowSize);
 		
-		if(data.algorithmData.blockMatching.mSpeckleWindowSize != -1)
-			mStereoDevice.state->speckleWindowSize = data.algorithmData.blockMatching.mSpeckleWindowSize;
+		if(data.mAlgorithmData.blockMatching.mSpeckleWindowSize != -1)
+			mStereoDevice.state->speckleWindowSize = data.mAlgorithmData.blockMatching.mSpeckleWindowSize;
 
-		if(data.algorithmData.blockMatching.mSpeckleRange != -1)
-			mStereoDevice.state->speckleRange = data.algorithmData.blockMatching.mSpeckleRange;
+		if(data.mAlgorithmData.blockMatching.mSpeckleRange != -1)
+			mStereoDevice.state->speckleRange = data.mAlgorithmData.blockMatching.mSpeckleRange;
 
-		if(data.algorithmData.blockMatching.mDisp12MaxDiff != -1)
-			mStereoDevice.state->disp12MaxDiff = data.algorithmData.blockMatching.mDisp12MaxDiff;
+		if(data.mAlgorithmData.blockMatching.mDisp12MaxDiff != -1)
+			mStereoDevice.state->disp12MaxDiff = data.mAlgorithmData.blockMatching.mDisp12MaxDiff;
 }
 
 template<>
@@ -258,44 +263,44 @@ void StereoCam::StereoContainer<StereoBM>::operator ()(const Mat &left, const Ma
 template<>
 StereoCam::StereoContainer<StereoSGBM>::StereoContainer(stereoModeData &data)
 {
-	mStereoDevice = StereoSGBM(data.algorithmData.semiGlobalBM.mMinDisp,
-								data.algorithmData.semiGlobalBM.mDisparities,
-								data.algorithmData.semiGlobalBM.mSadWindowSize,
-								data.algorithmData.semiGlobalBM.mP1,
-								data.algorithmData.semiGlobalBM.mP2,
-								data.algorithmData.semiGlobalBM.mDisp12MaxDiff,
-								data.algorithmData.semiGlobalBM.mPreFilterCap,
-								data.algorithmData.semiGlobalBM.mUniquenessRatio,
-								data.algorithmData.semiGlobalBM.mSadWindowSize,
-								data.algorithmData.semiGlobalBM.mSpeckleRange,
-								data.algorithmData.semiGlobalBM.mFullDP);
+	mStereoDevice = StereoSGBM(data.mAlgorithmData.semiGlobalBM.mMinDisp,
+								data.mAlgorithmData.semiGlobalBM.mDisparities,
+								data.mAlgorithmData.semiGlobalBM.mSadWindowSize,
+								data.mAlgorithmData.semiGlobalBM.mP1,
+								data.mAlgorithmData.semiGlobalBM.mP2,
+								data.mAlgorithmData.semiGlobalBM.mDisp12MaxDiff,
+								data.mAlgorithmData.semiGlobalBM.mPreFilterCap,
+								data.mAlgorithmData.semiGlobalBM.mUniquenessRatio,
+								data.mAlgorithmData.semiGlobalBM.mSadWindowSize,
+								data.mAlgorithmData.semiGlobalBM.mSpeckleRange,
+								data.mAlgorithmData.semiGlobalBM.mFullDP);
 }
 
 //StereoVAR
 template<>
 StereoCam::StereoContainer<StereoVar>::StereoContainer(stereoModeData &data)
 {
-	mStereoDevice = StereoVar(data.algorithmData.var.mLevels,
-								data.algorithmData.var.mPyrScale,
-								data.algorithmData.var.mIteratnions,
-								data.algorithmData.var.mMinDisp,
-								data.algorithmData.var.mMaxDisp,
-								data.algorithmData.var.mPolyN,
-								data.algorithmData.var.mPolySigma,
-								data.algorithmData.var.mFi,
-								data.algorithmData.var.mLambda,
-								data.algorithmData.var.mPenalization,
-								data.algorithmData.var.mCycle,
-								data.algorithmData.var.mFlags);
+	mStereoDevice = StereoVar(data.mAlgorithmData.var.mLevels,
+								data.mAlgorithmData.var.mPyrScale,
+								data.mAlgorithmData.var.mIteratnions,
+								data.mAlgorithmData.var.mMinDisp,
+								data.mAlgorithmData.var.mMaxDisp,
+								data.mAlgorithmData.var.mPolyN,
+								data.mAlgorithmData.var.mPolySigma,
+								data.mAlgorithmData.var.mFi,
+								data.mAlgorithmData.var.mLambda,
+								data.mAlgorithmData.var.mPenalization,
+								data.mAlgorithmData.var.mCycle,
+								data.mAlgorithmData.var.mFlags);
 }
 
 //Stereo_BM_GPU
 template<>
 StereoCam::StereoContainer<gpu::StereoBM_GPU>::StereoContainer(stereoModeData &data)
 {
-	mStereoDevice = gpu::StereoBM_GPU(data.algorithmData.gpuBlockMatching.mPreset,
-										data.algorithmData.gpuBlockMatching.mDisparities,
-										data.algorithmData.gpuBlockMatching.mWindowSize);
+	mStereoDevice = gpu::StereoBM_GPU(data.mAlgorithmData.gpuBlockMatching.mPreset,
+										data.mAlgorithmData.gpuBlockMatching.mDisparities,
+										data.mAlgorithmData.gpuBlockMatching.mWindowSize);
 }
 
 template<>
@@ -312,14 +317,14 @@ void StereoCam::StereoContainer<gpu::StereoBM_GPU>::operator ()(const Mat &left,
 template<>
 StereoCam::StereoContainer<gpu::StereoBeliefPropagation>::StereoContainer(stereoModeData &data)
 {
-	mStereoDevice = gpu::StereoBeliefPropagation(data.algorithmData.beliefPropagation.mDisparities,
-												data.algorithmData.beliefPropagation.mIterations,
-												data.algorithmData.beliefPropagation.mLevels,
-												data.algorithmData.beliefPropagation.mMaxDataTerm,
-												data.algorithmData.beliefPropagation.mDataWeight,
-												data.algorithmData.beliefPropagation.mMaxDiscTerm,
-												data.algorithmData.beliefPropagation.mDiscSingleJump,
-												data.algorithmData.beliefPropagation.mMsgType);
+	mStereoDevice = gpu::StereoBeliefPropagation(data.mAlgorithmData.beliefPropagation.mDisparities,
+												data.mAlgorithmData.beliefPropagation.mIterations,
+												data.mAlgorithmData.beliefPropagation.mLevels,
+												data.mAlgorithmData.beliefPropagation.mMaxDataTerm,
+												data.mAlgorithmData.beliefPropagation.mDataWeight,
+												data.mAlgorithmData.beliefPropagation.mMaxDiscTerm,
+												data.mAlgorithmData.beliefPropagation.mDiscSingleJump,
+												data.mAlgorithmData.beliefPropagation.mMsgType);
 }
 
 template<>
@@ -336,16 +341,16 @@ void StereoCam::StereoContainer<gpu::StereoBeliefPropagation>::operator ()(const
 template<>
 StereoCam::StereoContainer<gpu::StereoConstantSpaceBP>::StereoContainer(stereoModeData &data)
 {
-	mStereoDevice = gpu::StereoConstantSpaceBP(data.algorithmData.beliefPropagation.mDisparities,
-												data.algorithmData.beliefPropagation.mIterations,
-												data.algorithmData.beliefPropagation.mLevels,
-												data.algorithmData.beliefPropagation.mNrPlane,
-												data.algorithmData.beliefPropagation.mMaxDataTerm,
-												data.algorithmData.beliefPropagation.mDataWeight,
-												data.algorithmData.beliefPropagation.mMaxDiscTerm,
-												data.algorithmData.beliefPropagation.mDiscSingleJump,
-												data.algorithmData.beliefPropagation.mMinDispTh,
-												data.algorithmData.beliefPropagation.mMsgType);
+	mStereoDevice = gpu::StereoConstantSpaceBP(data.mAlgorithmData.beliefPropagation.mDisparities,
+												data.mAlgorithmData.beliefPropagation.mIterations,
+												data.mAlgorithmData.beliefPropagation.mLevels,
+												data.mAlgorithmData.beliefPropagation.mNrPlane,
+												data.mAlgorithmData.beliefPropagation.mMaxDataTerm,
+												data.mAlgorithmData.beliefPropagation.mDataWeight,
+												data.mAlgorithmData.beliefPropagation.mMaxDiscTerm,
+												data.mAlgorithmData.beliefPropagation.mDiscSingleJump,
+												data.mAlgorithmData.beliefPropagation.mMinDispTh,
+												data.mAlgorithmData.beliefPropagation.mMsgType);
 }
 
 template<>

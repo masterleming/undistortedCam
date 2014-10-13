@@ -116,7 +116,7 @@ optionReadStatus ConfigParser::readProgramOptions()
 			("poly-sigma", po::value<double>()->default_value(1), "Standard deviation of the Gaussian that is used to smooth derivatives that are used as a basis for the polynomial expansion.")
 			("fi", po::value<float>()->default_value(1), "The smoothness parameter, or the weight coefficient for the smoothness term.")
 			("lambda", po::value<float>()->default_value(0), "The threshold parameter for edge-preserving smoothness.")
-			("penalization", po::value<string>()->default_value("tichinov"), "Possible values:\n   \ttichinov, charbonnier,perona-malik")
+			("penalization", po::value<string>()->default_value("tichinov"), "Possible values:\n   \ttichinov, charbonnier, perona-malik")
 			("cycle", po::value<string>()->default_value("cycle-o"), "Type of the multigrid cycle. Possible values:\n   \tcycle-o and cycle-v.")
 			("flags",po::value<vector<string> >()->multitoken(), "The operation flags; can be a combination of the following:"
 					"\n   USE_INITIAL_DISPARITY: Use the input flow as the initial flow approximation."
@@ -348,61 +348,61 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 		if (prgCfg.mAlgorithm == "bm")
 		{
 			camData.mMode = SM_BLOCK_MACHING;
-			camData.algorithmData.blockMatching.mSadWindowSize = mVarMap["sad-window-size"].as<int>();
-			camData.algorithmData.blockMatching.mDisparities = mVarMap["disparities"].as<int>();
+			camData.mAlgorithmData.blockMatching.mSadWindowSize = mVarMap["sad-window-size"].as<int>();
+			camData.mAlgorithmData.blockMatching.mDisparities = mVarMap["disparities"].as<int>();
 			
 			string preset = mVarMap["preset"].as<string>();
 			if(preset == "basic")
-				camData.algorithmData.blockMatching.mPreset = StereoBM::BASIC_PRESET;
+				camData.mAlgorithmData.blockMatching.mPreset = StereoBM::BASIC_PRESET;
 			else if(preset == "fish-eye")
-				camData.algorithmData.blockMatching.mPreset = StereoBM::FISH_EYE_PRESET;
+				camData.mAlgorithmData.blockMatching.mPreset = StereoBM::FISH_EYE_PRESET;
 			else if(preset == "narrow")
-				camData.algorithmData.blockMatching.mPreset = StereoBM::NARROW_PRESET;
+				camData.mAlgorithmData.blockMatching.mPreset = StereoBM::NARROW_PRESET;
 			else
 			{
 				cerr << "\nUnrecognised preset was specified: '" << preset << "'!\n";
 				return false;
 			}
 		
-			camData.algorithmData.blockMatching.mSpeckleWindowSize = mVarMap["speckle-window-size"].as<int>();
-			camData.algorithmData.blockMatching.mSpeckleRange = mVarMap["speckle-range"].as<int>();
-			camData.algorithmData.blockMatching.mDisp12MaxDiff = mVarMap["disp-12-max-diff"].as<int>();
+			camData.mAlgorithmData.blockMatching.mSpeckleWindowSize = mVarMap["speckle-window-size"].as<int>();
+			camData.mAlgorithmData.blockMatching.mSpeckleRange = mVarMap["speckle-range"].as<int>();
+			camData.mAlgorithmData.blockMatching.mDisp12MaxDiff = mVarMap["disp-12-max-diff"].as<int>();
 		}
 		else if (prgCfg.mAlgorithm == "sgbm")
 		{
 			camData.mMode = SM_SEMI_GLOBAL_BM;
-			camData.algorithmData.semiGlobalBM.mMinDisp = mVarMap["min-disp"].as<int>();
-			camData.algorithmData.semiGlobalBM.mDisparities = mVarMap["disparities"].as<int>();
-			camData.algorithmData.semiGlobalBM.mSadWindowSize = mVarMap["sad-window-size"].as<int>();
-			camData.algorithmData.semiGlobalBM.mP1 = mVarMap["p1"].as<int>();
-			camData.algorithmData.semiGlobalBM.mP2 = mVarMap["p2"].as<int>();
-			camData.algorithmData.semiGlobalBM.mDisp12MaxDiff = mVarMap["disp-12-max-diff"].as<int>();
-			camData.algorithmData.semiGlobalBM.mPreFilterCap = mVarMap["pre-filter-cap"].as<int>();
-			camData.algorithmData.semiGlobalBM.mUniquenessRatio = mVarMap["uniqueness-ratio"].as<int>();
-			camData.algorithmData.semiGlobalBM.mSpeckleWindowsSize = mVarMap["speckle-window-size"].as<int>();
-			camData.algorithmData.semiGlobalBM.mSpeckleRange = mVarMap["speckle-range"].as<int>();
-			camData.algorithmData.semiGlobalBM.mFullDP = mVarMap["full-dp"].as<bool>();
+			camData.mAlgorithmData.semiGlobalBM.mMinDisp = mVarMap["min-disp"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mDisparities = mVarMap["disparities"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mSadWindowSize = mVarMap["sad-window-size"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mP1 = mVarMap["p1"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mP2 = mVarMap["p2"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mDisp12MaxDiff = mVarMap["disp-12-max-diff"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mPreFilterCap = mVarMap["pre-filter-cap"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mUniquenessRatio = mVarMap["uniqueness-ratio"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mSpeckleWindowsSize = mVarMap["speckle-window-size"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mSpeckleRange = mVarMap["speckle-range"].as<int>();
+			camData.mAlgorithmData.semiGlobalBM.mFullDP = mVarMap["full-dp"].as<bool>();
 		}
 		else if (prgCfg.mAlgorithm == "var")
 		{
 			camData.mMode = SM_VAR;
-			camData.algorithmData.var.mLevels = mVarMap["levels"].as<int>();
-			camData.algorithmData.var.mPyrScale = mVarMap["pyr-scale"].as<double>();
-			camData.algorithmData.var.mIteratnions = mVarMap["iterations"].as<int>();
-			camData.algorithmData.var.mMinDisp = mVarMap["min-disp"].as<int>();
-			camData.algorithmData.var.mMaxDisp = mVarMap["max-disp"].as<int>();
-			camData.algorithmData.var.mPolyN = mVarMap["poly-n"].as<int>();
-			camData.algorithmData.var.mPolySigma = mVarMap["poly-sigma"].as<double>();
-			camData.algorithmData.var.mFi = mVarMap["fi"].as<float>();
-			camData.algorithmData.var.mLambda = mVarMap["lambda"].as<float>();
+			camData.mAlgorithmData.var.mLevels = mVarMap["levels"].as<int>();
+			camData.mAlgorithmData.var.mPyrScale = mVarMap["pyr-scale"].as<double>();
+			camData.mAlgorithmData.var.mIteratnions = mVarMap["iterations"].as<int>();
+			camData.mAlgorithmData.var.mMinDisp = mVarMap["min-disp"].as<int>();
+			camData.mAlgorithmData.var.mMaxDisp = mVarMap["max-disp"].as<int>();
+			camData.mAlgorithmData.var.mPolyN = mVarMap["poly-n"].as<int>();
+			camData.mAlgorithmData.var.mPolySigma = mVarMap["poly-sigma"].as<double>();
+			camData.mAlgorithmData.var.mFi = mVarMap["fi"].as<float>();
+			camData.mAlgorithmData.var.mLambda = mVarMap["lambda"].as<float>();
 
 			string penalization = mVarMap["penalization"].as<string>();
 			if(penalization == "tichinov")
-				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_TICHONOV;
+				camData.mAlgorithmData.var.mPenalization = StereoVar::PENALIZATION_TICHONOV;
 			else if(penalization == "charbonnier")
-				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_CHARBONNIER;
+				camData.mAlgorithmData.var.mPenalization = StereoVar::PENALIZATION_CHARBONNIER;
 			else if(penalization == "perona-malik")
-				camData.algorithmData.var.mPenalization = StereoVar::PENALIZATION_PERONA_MALIK;
+				camData.mAlgorithmData.var.mPenalization = StereoVar::PENALIZATION_PERONA_MALIK;
 			else
 			{
 				cerr << "\nUnrecognised penalisation mode: '" << penalization << "'!\n";
@@ -411,16 +411,16 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 
 			string cycle = mVarMap["cycle"].as<string>();
 			if(cycle == "cycle-o")
-				camData.algorithmData.var.mCycle = StereoVar::CYCLE_O;
+				camData.mAlgorithmData.var.mCycle = StereoVar::CYCLE_O;
 			else if (cycle == "cycle-v")
-				camData.algorithmData.var.mCycle = StereoVar::CYCLE_V;
+				camData.mAlgorithmData.var.mCycle = StereoVar::CYCLE_V;
 			else
 			{
 				cerr << "\nUnrecognised cycle found: '" << cycle << "'!\n";
 				return false;
 			}
 
-			camData.algorithmData.var.mFlags = 0;
+			camData.mAlgorithmData.var.mFlags = 0;
 			if(mVarMap.count("flags"))
 			{
 				vector<string> flags = mVarMap["flags"].as<vector<string> >();
@@ -428,15 +428,15 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 				for(vector<string>::iterator i = flags.begin(); i != flags.end(); i++)
 				{
 					if(*i == "USE_INITIAL_DISPARITY")
-						camData.algorithmData.var.mFlags |= StereoVar::USE_INITIAL_DISPARITY;
+						camData.mAlgorithmData.var.mFlags |= StereoVar::USE_INITIAL_DISPARITY;
 					else if(*i == "USE_EQUALIZE_HIST")
-						camData.algorithmData.var.mFlags |= StereoVar::USE_EQUALIZE_HIST;
+						camData.mAlgorithmData.var.mFlags |= StereoVar::USE_EQUALIZE_HIST;
 					else if(*i == "USE_SMART_ID")
-						camData.algorithmData.var.mFlags |= StereoVar::USE_SMART_ID;
+						camData.mAlgorithmData.var.mFlags |= StereoVar::USE_SMART_ID;
 					else if(*i == "USE_AUTO_PARAMS")
-						camData.algorithmData.var.mFlags |= StereoVar::USE_AUTO_PARAMS;
+						camData.mAlgorithmData.var.mFlags |= StereoVar::USE_AUTO_PARAMS;
 					else if(*i == "USE_MEDIAN_FILTERING")
-						camData.algorithmData.var.mFlags |= StereoVar::USE_MEDIAN_FILTERING;
+						camData.mAlgorithmData.var.mFlags |= StereoVar::USE_MEDIAN_FILTERING;
 					else
 					{
 						cerr << "\nUnrecognised flag found: '" << *i << "'!\n";
@@ -451,46 +451,46 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 
 			string preset = mVarMap["preset"].as<string>();
 			if(preset == "basic")
-				camData.algorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::BASIC_PRESET;
+				camData.mAlgorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::BASIC_PRESET;
 			else if(preset == "xsobel")
-				camData.algorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
+				camData.mAlgorithmData.gpuBlockMatching.mPreset = gpu::StereoBM_GPU::PREFILTER_XSOBEL;
 			else
 			{
 				cerr << "\nUnrecognised preset found: '" << preset << "'!\n";
 				return false;
 			}
 
-			camData.algorithmData.gpuBlockMatching.mDisparities = mVarMap["disparities"].as<int>();
-			camData.algorithmData.gpuBlockMatching.mWindowSize = mVarMap["win-size"].as<int>();
+			camData.mAlgorithmData.gpuBlockMatching.mDisparities = mVarMap["disparities"].as<int>();
+			camData.mAlgorithmData.gpuBlockMatching.mWindowSize = mVarMap["win-size"].as<int>();
 		}
 		else if (prgCfg.mAlgorithm == "bp")
 		{
 			camData.mMode = SM_BELIEF_PROPAGATION;
-			camData.algorithmData.beliefPropagation.mDisparities = mVarMap["disparities"].as<int>();
-			camData.algorithmData.beliefPropagation.mIterations = mVarMap["iterations"].as<int>();
-			camData.algorithmData.beliefPropagation.mLevels = mVarMap["levels"].as<int>();
-			camData.algorithmData.beliefPropagation.mNrPlane = mVarMap["nr-plane"].as<int>();
-			camData.algorithmData.beliefPropagation.mMaxDataTerm = mVarMap["max-data-term"].as<float>();
-			camData.algorithmData.beliefPropagation.mDataWeight = mVarMap["data-weight"].as<float>();
-			camData.algorithmData.beliefPropagation.mMaxDiscTerm = mVarMap["max-disc-term"].as<float>();
-			camData.algorithmData.beliefPropagation.mDiscSingleJump = mVarMap["disc-single-jump"].as<float>();
-			camData.algorithmData.beliefPropagation.mMsgType = mVarMap["msg-type"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mDisparities = mVarMap["disparities"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mIterations = mVarMap["iterations"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mLevels = mVarMap["levels"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mNrPlane = mVarMap["nr-plane"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mMaxDataTerm = mVarMap["max-data-term"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mDataWeight = mVarMap["data-weight"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mMaxDiscTerm = mVarMap["max-disc-term"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mDiscSingleJump = mVarMap["disc-single-jump"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mMsgType = mVarMap["msg-type"].as<int>();
 
 		}
 		else if (prgCfg.mAlgorithm == "cs")
 		{
 			camData.mMode = SM_CONSTANT_SPACE_BP;
 			camData.mMode = SM_BELIEF_PROPAGATION;
-			camData.algorithmData.beliefPropagation.mDisparities = mVarMap["disparities"].as<int>();
-			camData.algorithmData.beliefPropagation.mIterations = mVarMap["iterations"].as<int>();
-			camData.algorithmData.beliefPropagation.mLevels = mVarMap["levels"].as<int>();
-			camData.algorithmData.beliefPropagation.mNrPlane = mVarMap["nr-plane"].as<int>();
-			camData.algorithmData.beliefPropagation.mMaxDataTerm = mVarMap["max-data-term"].as<float>();
-			camData.algorithmData.beliefPropagation.mDataWeight = mVarMap["data-weight"].as<float>();
-			camData.algorithmData.beliefPropagation.mMaxDiscTerm = mVarMap["max-disc-term"].as<float>();
-			camData.algorithmData.beliefPropagation.mDiscSingleJump = mVarMap["disc-single-jump"].as<float>();
-			camData.algorithmData.beliefPropagation.mMinDispTh = mVarMap["min-disp-th"].as<int>();
-			camData.algorithmData.beliefPropagation.mMsgType = mVarMap["msg-type"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mDisparities = mVarMap["disparities"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mIterations = mVarMap["iterations"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mLevels = mVarMap["levels"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mNrPlane = mVarMap["nr-plane"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mMaxDataTerm = mVarMap["max-data-term"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mDataWeight = mVarMap["data-weight"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mMaxDiscTerm = mVarMap["max-disc-term"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mDiscSingleJump = mVarMap["disc-single-jump"].as<float>();
+			camData.mAlgorithmData.beliefPropagation.mMinDispTh = mVarMap["min-disp-th"].as<int>();
+			camData.mAlgorithmData.beliefPropagation.mMsgType = mVarMap["msg-type"].as<int>();
 		}
 		else
 		{
@@ -531,16 +531,24 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 		}
 	}
 
+	unsigned isCamParametrized = 0;
+
 	if (mVarMap.count("intrinsics"))
+	{
 		prgCfg.mIntrinsics = mVarMap["intrinsics"].as<string>();
+		isCamParametrized++;
+	}
 
 	if (mVarMap.count("extrinsics"))
+	{
 		prgCfg.mExtrinsics = mVarMap["extrinsics"].as<string>();
+		isCamParametrized++;
+	}
 
 	if (mVarMap.count("swap-cameras"))
 		prgCfg.mSwapCameras = true;
 	//////////////////////////////////////////////////////////////////
-	if (mVarMap.count("skip"))
+	if (mVarMap.count("skip") || isCamParametrized == 2)
 		calibCfg.mSkip = true;
 
 	if (mVarMap.count("calibration-samples"))

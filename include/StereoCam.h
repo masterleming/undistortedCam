@@ -117,23 +117,26 @@ struct stereoModeData
 	};
 
 	StereoMode mMode;
-	struct
+	struct cameraConstants
 	{
 		camData *mCam1;
 		camData *mCam2;
 		Mat R;
 		Mat T;
 		Mat Q;
-	} camera;
+	};
 
-	union
+	union algorithmData
 	{
 		blockMaching_data blockMatching;
 		semiGlobalBM_data semiGlobalBM;
 		var_data var;
 		gpuBlockMatching_data gpuBlockMatching;
 		beliefPropagation_data beliefPropagation;
-	} algorithmData;
+	};
+
+	cameraConstants camera;
+	algorithmData mAlgorithmData;
 
 public:
 	stereoModeData();
