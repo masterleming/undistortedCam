@@ -1,5 +1,6 @@
+#UndistortedCam
 # add the executable
-add_executable(undistortedCam
+add_executable(${OutputName}
 	StereoCam.cpp
 	main.cpp
 	undistorted_cam.cpp
@@ -7,10 +8,10 @@ add_executable(undistortedCam
 )
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-target_link_libraries(undistortedCam ${OpenCV_LIBS} ${Boost_LIBRARIES})
+target_link_libraries(${OutputName} ${OpenCV_LIBS} ${Boost_LIBRARIES})
 
 # add the install targets
-install (TARGETS undistortedCam RUNTIME DESTINATION .)
+install (TARGETS ${OutputName} RUNTIME DESTINATION ${OutputName})
 #install (FILES ${OpenCV_LIBS} ${Boost_LIBRARIES} DESTINATION bin)
 #install(DIRECTORY ${Boost_LIBRARY_DIR} DESTINATION bin FILES_MATCHING PATTERN "*${Boost_LIBRARIES}*")
 #install(DIRECTORY ${OpenCV_LIB_DIR_OPT} DESTINATION bin FILES_MATCHING PATTERN "*${OpenCV_LIBS}*")
