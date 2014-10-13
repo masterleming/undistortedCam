@@ -480,7 +480,6 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 		else if (prgCfg.mAlgorithm == "cs")
 		{
 			camData.mMode = SM_CONSTANT_SPACE_BP;
-			camData.mMode = SM_BELIEF_PROPAGATION;
 			camData.mAlgorithmData.beliefPropagation.mDisparities = mVarMap["disparities"].as<int>();
 			camData.mAlgorithmData.beliefPropagation.mIterations = mVarMap["iterations"].as<int>();
 			camData.mAlgorithmData.beliefPropagation.mLevels = mVarMap["levels"].as<int>();
