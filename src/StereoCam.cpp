@@ -187,7 +187,8 @@ void StereoCam::process(bool skipRemap)
 	imshow(mWindow2, gray2);
 	imshow(mDisparityWindow, dispFrame8);
 
-	StereoFactory::saveOutput(mData, dispFrame8);
+	if(mMode == staticImg)
+		StereoFactory::saveOutput(mData, dispFrame8);
 }
 
 const Mat& StereoCam::getR()
