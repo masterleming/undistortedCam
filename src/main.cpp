@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 	stereoModeInfo.camera.T = T;
 	stereoModeInfo.camera.Q = Q;
 
-	if(stereoModeInfo.mMode == SM_BELIEF_PROPAGATION || stereoModeInfo.mMode == SM_CONSTANT_SPACE_BP)
+	if(stereoModeInfo.mMode >= SM_GPU_BM)
 	{
 		if(!initializeCUDA())
 		{
