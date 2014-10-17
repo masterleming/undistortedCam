@@ -147,7 +147,7 @@ class StereoCam
 private:
 	enum SC_MODE
 	{
-		invalidMode = -1, normalCam = 0, shiftedCam, staticImg
+		invalidMode = -1, normalCam = 0, staticImg
 	};
 
 public:
@@ -222,7 +222,7 @@ private:
 
 public:
 	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode = NONE);
-	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right);
+	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode = NONE);
 	~StereoCam();
 
 	void process(bool skipRemap);

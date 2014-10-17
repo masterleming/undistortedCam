@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 
 	StereoCam *scCam;
 	if (programInfo.mStatic)
-		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", left, right);
+		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", left, right, programInfo.mShifted);
 	else
 		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", programInfo.mShifted);
 

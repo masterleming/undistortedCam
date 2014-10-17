@@ -30,28 +30,20 @@ StereoCam::StereoCam()
 StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode)
 		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL)
 {
-	if (mode == NONE)
-	{
-		mMode = normalCam;
-		mShiftMode = NONE;
-	}
-	else
-	{
-		mMode = shiftedCam;
-		mShiftMode = mode;
-	}
+	mMode = normalCam;
+	mShiftMode = mode;
 
 	mStereoDevice = StereoFactory::createStereoDevice(mData);
 }
 
-StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right)
+StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode)
 		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL), mMode(StereoCam::staticImg), mShiftMode(
 				NONE)
 {
 	left.copyTo(mLeft);
 	right.copyTo(mRight);
-//	cvtColor(left, mLeft, CV_RGB2GRAY);
-//	cvtColor(right, mRight, CV_RGB2GRAY);
+	mMode = staticImg;
+	mShiftMode = mode;
 
 	mStereoDevice = StereoFactory::createStereoDevice(mData);
 }
@@ -68,15 +60,6 @@ StereoCam::~StereoCam()
 void StereoCam::process(bool skipRemap)
 {
 	Mat frame1, frame2, oFrame1, oFrame2, gray1, gray2, dispFrame;
-
-//only for shifted fragment
-	int offset = 50;
-	if (mShiftMode == RIGHT)
-		offset = -50;
-	Rect initialFrame(150, 150, 300, 300);
-	Rect finalFrame(initialFrame.x + offset, initialFrame.y, initialFrame.width, initialFrame.height);
-	Mat push, cleared, pushed;
-//end shifted variables
 
 	switch (mMode)
 	{
@@ -102,52 +85,6 @@ void StereoCam::process(bool skipRemap)
 		cvtColor(oFrame2, gray2, CV_RGB2GRAY);
 
 		break;
-	case shiftedCam:
-		*mData.camera.mCam1->mCap >> frame1;
-		*mData.camera.mCam2->mCap >> frame2;
-
-		if (frame1.empty() || frame2.empty())
-			return;
-
-		if (skipRemap)
-		{
-			oFrame1 = frame1;
-			oFrame2 = frame2;
-		}
-		else
-		{
-			remap(frame1, oFrame1, mData.camera.mCam1->mMap1, mData.camera.mCam1->mMap2, INTER_LANCZOS4);
-			remap(frame2, oFrame2, mData.camera.mCam2->mMap1, mData.camera.mCam2->mMap2, INTER_LANCZOS4);
-		}
-
-		cvtColor(oFrame1, gray1, CV_RGB2GRAY);
-		cvtColor(oFrame2, gray2, CV_RGB2GRAY);
-
-		switch (mShiftMode)
-		{
-		case LEFT:
-			push = Mat(gray1, initialFrame);
-			cleared = Mat(gray2, initialFrame);
-			pushed = Mat(gray2, finalFrame);
-
-			gray1.copyTo(gray2);
-			break;
-		case RIGHT:
-			push = Mat(gray2, initialFrame);
-			cleared = Mat(gray1, initialFrame);
-			pushed = Mat(gray1, finalFrame);
-
-			gray2.copyTo(gray1);
-			break;
-		case NONE:
-		default:
-			throw "Shift can not go with NONE mode! Make sure to pass \"left\" or \"right\" to \"--shifted\" parameter!.";
-		}
-
-		cleared = Scalar(0, 0, 0);
-		push.copyTo(pushed);
-
-		break;
 	case staticImg:
 		mLeft.copyTo(gray1);
 		mRight.copyTo(gray2);
@@ -156,6 +93,40 @@ void StereoCam::process(bool skipRemap)
 	default:
 		return;
 	}
+
+	//**
+		if(mShiftMode != NONE)
+		{
+			int dimm = min(gray1.rows / 3, gray1.cols / 3);
+			int offset = dimm / 3;
+			if (mShiftMode == RIGHT)
+				offset = -offset;
+			Rect initialFrame(gray1.cols / 2 - dimm / 2, gray1.rows / 2 - dimm / 2, dimm, dimm);
+			Rect finalFrame(initialFrame.x + offset, initialFrame.y, initialFrame.width, initialFrame.height);
+			Mat push, cleared, pushed;
+
+			switch (mShiftMode)
+			{
+			case LEFT:
+				push = Mat(gray1, initialFrame);
+				cleared = Mat(gray2, initialFrame);
+				pushed = Mat(gray2, finalFrame);
+
+				gray1.copyTo(gray2);
+				break;
+			case RIGHT:
+				push = Mat(gray2, initialFrame);
+				cleared = Mat(gray1, initialFrame);
+				pushed = Mat(gray1, finalFrame);
+
+				gray2.copyTo(gray1);
+				break;
+			}
+			
+			cleared = Scalar(0, 0, 0);
+			push.copyTo(pushed);
+		}
+	//**
 
 	int64 t = getTickCount();
 	(*mStereoDevice)(gray1, gray2, dispFrame, CV_16S); //CV_32F);
