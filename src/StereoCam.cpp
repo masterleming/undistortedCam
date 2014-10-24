@@ -98,7 +98,7 @@ void StereoCam::process(bool skipRemap)
 		if(mShiftMode != NONE)
 		{
 			int dimm = min(gray1.rows / 3, gray1.cols / 3);
-			int offset = dimm / 3;
+			int offset = -dimm / 3;
 			if (mShiftMode == RIGHT)
 				offset = -offset;
 			Rect initialFrame(gray1.cols / 2 - dimm / 2, gray1.rows / 2 - dimm / 2, dimm, dimm);
