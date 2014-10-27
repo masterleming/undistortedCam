@@ -8,6 +8,7 @@
 #include "StereoCam.h"
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <cmath>
 
 using namespace std;
 
@@ -20,15 +21,16 @@ stereoModeData::stereoModeData()
 }
 
 StereoCam::StereoCam()
-		: mData()
+		: mData(), mSilent(false)
 {
 	mMode = invalidMode;
 	mShiftMode = NONE;
 	mStereoDevice = NULL;
+	mDiff = NULL;
 }
 
-StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode)
-		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL)
+StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode, DisparityVerifier *diff, bool silent)
+		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL), mDiff(diff), mSilent(silent)
 {
 	mMode = normalCam;
 	mShiftMode = mode;
@@ -36,9 +38,8 @@ StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string wind
 	mStereoDevice = StereoFactory::createStereoDevice(mData);
 }
 
-StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode)
-		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL), mMode(StereoCam::staticImg), mShiftMode(
-				NONE)
+StereoCam::StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode, DisparityVerifier *diff, bool silent)
+		: mData(data), mWindow1(window1), mWindow2(window2), mDisparityWindow(disparityWindow), mStereoDevice(NULL), mMode(StereoCam::staticImg), mShiftMode(NONE), mDiff(diff), mSilent(silent)
 {
 	left.copyTo(mLeft);
 	right.copyTo(mRight);
@@ -55,6 +56,8 @@ StereoCam::~StereoCam()
 		delete mStereoDevice;
 		mStereoDevice = NULL;
 	}
+	delete mDiff;
+	mDiff = NULL;
 }
 
 void StereoCam::process(bool skipRemap)
@@ -136,30 +139,45 @@ void StereoCam::process(bool skipRemap)
 	double min, max;
 
 	Mat dispFrame8;
-
+	
 	minMaxIdx(dispFrame, &min, &max);
-//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
-
-	dispFrame = (255 * (dispFrame - min)) / (max - min);
-//	minMaxIdx(dispFrame, &min, &max);
-//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
-
+	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+	
+//	dispFrame = (255 * (dispFrame - min)) / (max - min);
 
 	dispFrame.convertTo(dispFrame8, CV_8U);
-//	minMaxIdx(dispFrame8, &min, &max);
-//	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
-//
-//	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
-//	
-//	minMaxIdx(dispFrame8, &min, &max);
-//	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+	minMaxIdx(dispFrame8, &min, &max);
+	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
 
-	imshow(mWindow1, gray1);
-	imshow(mWindow2, gray2);
-	imshow(mDisparityWindow, dispFrame8);
+	max = pow(2, ceil((log(max) / log(2.0)))) - 1;
+	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
+	
+	minMaxIdx(dispFrame8, &min, &max);
+	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+
+//	minMaxIdx(dispFrame, &min, &max);
+//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+
+//	minMaxIdx(dispFrame, &min, &max);
+//	cout << "dispFrame\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame.empty() ? "YES" : "NO") << endl;
+	
+	if(!mSilent)
+	{
+		imshow(mWindow1, gray1);
+		imshow(mWindow2, gray2);
+		imshow(mDisparityWindow, dispFrame8);
+	}
+	
+	if(mDiff != NULL)
+	{
+		Mat diff = mDiff->diff(dispFrame8);
+		if(!mSilent)
+			imshow("diff", diff);
+		cout << "sum of absolute differences: " << mDiff->getAbs() << "\nsum of squared differences: " << mDiff->getSquare() << endl;
+	}
 
 	if(mMode == staticImg)
-		StereoFactory::saveOutput(mData, dispFrame8);
+		StereoFactory::saveOutput(mData, dispFrame8, mDiff);
 }
 
 const Mat& StereoCam::getR()
@@ -210,7 +228,7 @@ StereoCam::iStereoDevice* StereoCam::StereoFactory::createStereoDevice(stereoMod
 	return device;
 }
 
-void StereoCam::StereoFactory::saveOutput(stereoModeData &data, Mat &img)
+void StereoCam::StereoFactory::saveOutput(stereoModeData &data, Mat &img, DisparityVerifier *diff)
 {
 using namespace boost::posix_time;
 	
@@ -304,6 +322,8 @@ using namespace boost::posix_time;
 	}
 
 	imwrite(ss.str() + ".png", img);
+	if(diff != NULL)
+		diff->save(ss.str());
 	fs.release();
 }
 

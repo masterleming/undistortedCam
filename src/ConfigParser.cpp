@@ -66,6 +66,8 @@ optionReadStatus ConfigParser::readProgramOptions()
 			("left,l", po::value<string>(), "Sets left image for static image stereo-vision.")
 			("right,r", po::value<string>(), "Sets right image for static image stereo-vision.")
 			("static,s", "Enables static image stereo-vision.")
+			("verify,v", po::value<string>(), "Specifies file containing reference disparity. Only for 'static' mode.")
+			("silent", "Disables displaying any images. Also it prevent program blocking waiting for user input after algorithm is done. Only for 'static' mode.")
 			("shifted", po::value<string>(),"Applies algorithm to two copies of the same image, one of which has a rectangular piece of image shifted in an arbitrary direction. Pass \"left\" to copy left picture or \"right\" to copy right picture")
 			("swap-cameras,S","Swaps cameras input so there is no need to move already positioned cameras.")
 			("skip", "Skips camera calibration.")
@@ -510,6 +512,11 @@ bool ConfigParser::getRuntimeConfiguration(calibrationCfg &calibCfg, programCfg 
 			cerr << "Too few arguments passed to start static image stereo-vision. It requires both left and right images to be specified!";
 			return false;
 		}
+		if(mVarMap.count("verify"))
+			prgCfg.mReferenceDisparity = mVarMap["verify"].as<string>();
+		if(mVarMap.count("silent"))
+			prgCfg.mSilent = true;
+
 		prgCfg.mStatic = true;
 		prgCfg.mLeft = mVarMap["left"].as<string>();
 		prgCfg.mRight = mVarMap["right"].as<string>();

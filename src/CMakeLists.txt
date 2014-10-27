@@ -5,6 +5,7 @@ add_executable(${OutputName}
 	main.cpp
 	undistorted_cam.cpp
 	ConfigParser.cpp
+	DisparityVerifier.cpp
 )
 
 include_directories(${OpenCV_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})

@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include "ConfigParser.h"
+#include <DisparityVerifier.h>
 
 int main(int argc, char **argv)
 {
@@ -33,8 +34,12 @@ int main(int argc, char **argv)
 	//Setting intrinsics camera parameters (either from file or default (neutral) ones).
 	initIntrinsicsCamParams(programInfo.mSwapCameras, cam1, cam2, programInfo.mIntrinsics, capture1, capture2);
 
-	cvNamedWindow("Cam1", CV_WINDOW_AUTOSIZE);
-	cvNamedWindow("Cam2", CV_WINDOW_AUTOSIZE);
+	if(!programInfo.mSilent)
+	{
+		cvNamedWindow("Cam1", CV_WINDOW_AUTOSIZE);
+		cvNamedWindow("Cam2", CV_WINDOW_AUTOSIZE);
+		cvNamedWindow("StereoCam", CV_WINDOW_AUTOSIZE);
+	}
 	Mat frame1, frame2, oFrame1, oFrame2, R, T, Q;
 
 	capture1 >> frame1;
@@ -76,6 +81,13 @@ int main(int argc, char **argv)
 		right = imread(programInfo.mRight, CV_LOAD_IMAGE_GRAYSCALE);
 	}
 
+	DisparityVerifier *diff = NULL;
+	if(programInfo.mReferenceDisparity.size() > 0)
+	{
+		Mat ref = imread(programInfo.mReferenceDisparity, CV_LOAD_IMAGE_GRAYSCALE);
+		diff = new DisparityVerifier(ref);
+	}
+
 	stereoModeInfo.camera.mCam1 = &cam1;
 	stereoModeInfo.camera.mCam2 = &cam2;
 	stereoModeInfo.camera.R = R;
@@ -95,11 +107,9 @@ int main(int argc, char **argv)
 
 	StereoCam *scCam;
 	if (programInfo.mStatic)
-		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", left, right, programInfo.mShifted);
+		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", left, right, programInfo.mShifted, diff, programInfo.mSilent);
 	else
-		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", programInfo.mShifted);
-
-	cvNamedWindow("StereoCam", CV_WINDOW_AUTOSIZE);
+		scCam = new StereoCam(stereoModeInfo, "Cam1", "Cam2", "StereoCam", programInfo.mShifted, diff, programInfo.mSilent);
 
 	int waitPeriod = (programInfo.mStatic ? 0 : 33);
 
@@ -108,6 +118,8 @@ int main(int argc, char **argv)
 	{
 		scCam->process(calibInfo.mSkip);
 
+		if(programInfo.mSilent)
+			break;
 		char c = cvWaitKey(waitPeriod);
 		if (c == 27)
 			break;

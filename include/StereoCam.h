@@ -12,9 +12,10 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/contrib/contrib.hpp>
-//#include <opencv2/>
 #include <opencv2/opencv_modules.hpp>
 #include <opencv2/gpu/gpu.hpp>
+
+#include "DisparityVerifier.h"
 
 using namespace cv;
 
@@ -200,7 +201,7 @@ private:
 		};
 	public:
 		static iStereoDevice* createStereoDevice(stereoModeData &data);
-		static void saveOutput(stereoModeData &data, Mat &img);
+		static void saveOutput(stereoModeData &data, Mat &img, DisparityVerifier *diff);
 	};
 
 private:
@@ -218,11 +219,15 @@ private:
 	SC_MODE mMode;
 	SHIFT_CAM mShiftMode;
 
+	DisparityVerifier *mDiff;
+
+	bool mSilent;
+
 	StereoCam();
 
 public:
-	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode = NONE);
-	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode = NONE);
+	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, SHIFT_CAM mode, DisparityVerifier *diff, bool silent);
+	StereoCam(stereoModeData &data, std::string window1, std::string window2, std::string disparityWindow, Mat &left, Mat &right, SHIFT_CAM mode, DisparityVerifier *diff, bool silent);
 	~StereoCam();
 
 	void process(bool skipRemap);

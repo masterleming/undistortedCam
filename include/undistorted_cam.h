@@ -52,6 +52,8 @@ struct programCfg
 	string mLeft;
 	string mRight;
 	bool mStatic;
+	string mReferenceDisparity;
+	bool mSilent;
 	StereoCam::SHIFT_CAM mShifted;
 	string mIntrinsics;
 	string mExtrinsics;
@@ -64,6 +66,8 @@ public:
 		mLeft = "";
 		mRight = "";
 		mStatic = false;
+		mReferenceDisparity = "";
+		mSilent = false;
 		mShifted = StereoCam::NONE;
 		mIntrinsics = "";
 		mExtrinsics = "";
