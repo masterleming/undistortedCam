@@ -98,8 +98,8 @@ optionReadStatus ConfigParser::readProgramOptions()
 	algo_sgbm.add_options()("min-disp", po::value<int>()->default_value(0), "Minimum posible disparity value.")
 			("disparities,d", po::value<int>()->default_value(48), "Number of disparity levels to be separated. *MUST be dvivisible by 16.*")
 			("sad-window-size,w", po::value<int>()->default_value(11), "Size of a match block. *MUST be an odd number.*")
-			("p1,1", po::value<int>()->default_value(0), "Disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
-			("p2,2", po::value<int>()->default_value(0), "Another disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
+			("p1", po::value<int>()->default_value(0), "Disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
+			("p2", po::value<int>()->default_value(0), "Another disparity change penalisation parameter; setting it to non-zero value causes disparities to be smoother. *It is required that p1 < p2*")
 			("disp-12-max-diff", po::value<int>()->default_value(0), "Maxumum allowed difference (in integer pixel units) in the left-right disparity check. Set it to a non-positiv value to disable the check.")
 			("pre-filter-cap", po::value<int>()->default_value(0), "Truncation value for prefiltered image pixels. See OpenCV documentation for details.")
 			("uniqueness-ratio", po::value<int>()->default_value(0), "Marigin in percentage by which the best (minimum) cimputed cost function value should \"win\" the second best value to consider the found match correct.")
@@ -138,7 +138,6 @@ optionReadStatus ConfigParser::readProgramOptions()
 	algo_gpu_bp.add_options()("disparities,d", po::value<int>()->default_value(48), "Number of disparities")
 			("iterations,I", po::value<int>()->default_value(5), "Number of algorithm iterations on each level.")
 			("levels,L", po::value<int>()->default_value(4), "Number of levels.")
-			("nr-plane", po::value<int>()->default_value(4), "Number of disparity levels on the first level.")
 			("max-data-term", po::value<float>()->default_value(0), "Truncation of data cost.")
 			("data-weight", po::value<float>()->default_value(0), "Data weight.")
 			("max-disc-term", po::value<float>()->default_value(0), "Truncation of discontinuity.")
@@ -180,9 +179,9 @@ optionReadStatus ConfigParser::readProgramOptions()
 	po::store(first_run, mVarMap);
 
 	vector<string> unrecognised = po::collect_unrecognized(first_run.options, po::include_positional);
-	cout << "unrecognised:\n";
-	for(vector<string>::iterator i = unrecognised.begin(); i != unrecognised.end(); i++)
-		cout << "\t" << *i << endl;
+	//cout << "unrecognised:\n";
+	//for(vector<string>::iterator i = unrecognised.begin(); i != unrecognised.end(); i++)
+	//	cout << "\t" << *i << endl;
 
 	//Checking "global" options
 	//--checks for help message

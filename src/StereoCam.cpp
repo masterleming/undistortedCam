@@ -7,7 +7,9 @@
 
 #include "StereoCam.h"
 #include <iostream>
+#include <fstream>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/timer/timer.hpp>
 #include <cmath>
 
 using namespace std;
@@ -62,6 +64,9 @@ StereoCam::~StereoCam()
 
 void StereoCam::process(bool skipRemap)
 {
+	boost::timer::cpu_timer process_timer;
+//	process_timer.start();
+
 	Mat frame1, frame2, oFrame1, oFrame2, gray1, gray2, dispFrame;
 
 	switch (mMode)
@@ -131,10 +136,19 @@ void StereoCam::process(bool skipRemap)
 		}
 	//**
 
-	int64 t = getTickCount();
+	process_timer.start();
 	(*mStereoDevice)(gray1, gray2, dispFrame, CV_16S); //CV_32F);
-    t = getTickCount() - t;
-//	cout << "Time elapsed: " << t*1000/getTickFrequency() << endl;
+	process_timer.stop();
+
+	string time_str = boost::timer::format(process_timer.elapsed());
+
+	cout << time_str << endl;
+
+	std::ofstream time_report("time_report.txt", std::ios::app);
+	if(time_report.good())
+		time_report << time_str;
+	time_report.close();
+	
 
 	double min, max;
 
@@ -145,12 +159,13 @@ void StereoCam::process(bool skipRemap)
 	
 //	dispFrame = (255 * (dispFrame - min)) / (max - min);
 
-	dispFrame.convertTo(dispFrame8, CV_8U);
-	minMaxIdx(dispFrame8, &min, &max);
-	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
+	//dispFrame.convertTo(dispFrame8, CV_8U);
+	//minMaxIdx(dispFrame8, &min, &max);
+	//cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
 
-	max = pow(2, ceil((log(max) / log(2.0)))) - 1;
-	dispFrame8 = (255 * (dispFrame8 - min)) / (max - min);
+	max = pow(2, ceil((log(max) / log(2.0))));// - 1;
+	dispFrame /*dispFrame8*/ = (256 /*255*/ * (dispFrame /*dispFrame8 */- min)) / (max - min);
+	/**/dispFrame.convertTo(dispFrame8, CV_8U);
 	
 	minMaxIdx(dispFrame8, &min, &max);
 	cout << "dispFrame8\t" << "min: " << min << "\tmax: " << max << "\ttype: " << dispFrame8.type() << "\tempty? " << (dispFrame8.empty() ? "YES" : "NO") << endl;
@@ -178,6 +193,9 @@ void StereoCam::process(bool skipRemap)
 
 	if(mMode == staticImg)
 		StereoFactory::saveOutput(mData, dispFrame8, mDiff);
+	
+//	process_timer.stop();
+//	cout << boost::timer::format(process_timer.elapsed()) << endl;
 }
 
 const Mat& StereoCam::getR()
